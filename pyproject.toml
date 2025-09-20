@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=65.5.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pypapple"
+version = "0.0.1"
+description = "A Python implementation of the Iwa interpreter for the Pineapple programming language"
+requires-python = ">=3"
+readme = "README.md"
+license = "MIT"
+keywords = []
+authors = [{name = "Robert Lawrence DeForrest Reynolds"}]
+dependencies = [
+]
+
+[project.urls]
+Homepage = https://github.com/Robert-DeForrest-Reynolds/PyPapple
+Repository = https://github.com/Robert-DeForrest-Reynolds/PyPapple
