@@ -6,6 +6,8 @@ from typing import List
 
 from . import Interpreter
 
+
+
 __version__:str
 with open('setup.cfg') as cfg:
     __version__ = next(l.split('=')[1].strip() for l in cfg if l[:7] == "version")
