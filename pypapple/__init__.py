@@ -29,28 +29,22 @@ class Object:
     name:str
     value:Any
     def __init__(_, name):
-        print("Instantiating Object")
+        log("Instantiating Object")
         _.name = name
 
 
-class DevLog:
-    def __init__(_, msg:str, important:bool=False):
-        if important:
-            print(f'{YELLOW}{msg}{RESET}\n')
-        else:
-            print(f'{GREEN}{msg}{RESET}\n')
+def log(msg:str, important:bool=False) -> None:
+    if important:
+        print(f'{YELLOW}{msg}{RESET}\n')
+    else:
+        print(f'{GREEN}{msg}{RESET}\n')
 
 
-class Error:
-    def __init__(_, msg:str, line:int=None):
-        if line:
-            print(f'{RED}Error at Line {line}:{RESET}\n{msg}\n')
-        else:
-            print(f'{RED}Error:{RESET}\n{msg}\n')
-
-
-def output(msg:str) -> None:
-    print(msg)
+def error(msg:str, line:int=None):
+    if line:
+        print(f'{RED}Error at Line {line}:{RESET}\n{msg}\n')
+    else:
+        print(f'{RED}Error:{RESET}\n{msg}\n')
 
 
 class Interpreter:
@@ -72,6 +66,9 @@ class Interpreter:
             'try':_.parse_try,
             'Out':_.parse_call,
         }
+        _.callables = {
+            "Out":lambda *args: _.output(*args)
+        }
         _.namespaces = {}
 
         while _.interpreting and _.unbounded_cycle_count != 0:
@@ -82,12 +79,12 @@ class Interpreter:
     def execute_next(_) -> None:
         try: line = _.code[0]
         except IndexError:
-            DevLog('End of File reached')
+            log('End of File reached')
             _.interpreting = False
             return
         
         if len(line) != 0:
-            DevLog(f'Parsing Line: {line}', important=True)
+            log(f'Parsing Line: {line}', important=True)
             _.parse(line)
         else: _.code.pop(0)
 
@@ -100,13 +97,16 @@ class Interpreter:
         '''
         try:
             result = function()
-            if callable(result):
-                result()
+            try:
+                if callable(result):
+                    result()
+            except Exception as e:
+                error(f'Error calling result in _try: {e}')
             return True
         except Exception as e:
             if optional_msg:
-                DevLog(optional_msg)
-                DevLog(e)
+                log(optional_msg)
+                log(e)
             return False
 
 
@@ -114,87 +114,69 @@ class Interpreter:
         for count, character in enumerate(line):
             potential_keyword = line[:count+1]
             if character == '~':
-                if _._try(lambda: _.reserved[potential_keyword]):
-                    return
-                else:
-                    error_line:int = _.original_code.index(line)
-                    Error(f'Unknown: keyword {potential_keyword}', line=error_line)
+                if line[:count].strip() != "":
+                    potential_keyword = line[:count].strip()
+                    if _._try(lambda: _.reserved[line[:count].strip()]):
+                        return
+                    else:
+                        error_line:int = _.original_code.index(line)
+                        error(f'Unknown keyword: `{potential_keyword.strip()}`', line=error_line)
                 # this needs to handle lines where the code comes before the comment
                 _.code = _.code[1:]
                 return
             
             if _._try(lambda: _.reserved[potential_keyword]):
                 return
-            
-            if _._try(lambda: _.builtin_callables[potential_keyword]):
-                return
 
             if _._try(lambda: _.reserved[character]):
                 return
         
         error_line:int = _.original_code.index(line)
-        Error(f'Unparsable line, ignoring completely: {potential_keyword}', line=error_line)
+        error(f'Unparsable line, ignoring completely: `{potential_keyword}`', line=error_line)
         _.code = _.code[1:]
 
 
-    def find_closing_bracket(_) -> str:
-        'Removes code from _.code where necessary'
-        # track if there's inner bracket syntax
-        required_brackets:int = 0
-        for count, line in enumerate(_.code):
-            if '{' in line and not '}' in line:
-                required_brackets += 1
-                print("found opening bracket")
-            if '}' in line:
-                print("found closing bracket")
-                required_brackets -= 1
-                if required_brackets == 0:
-                    content = ''.join(_.code[:count+1])
-                    _.code = _.code[count+1:]
-                    return content
-
-
-    def find_closing_brace(_) -> str:
+    def find_closing_symbol(_, opening_symbol:str, closing_symbol) -> str:
         'Removes code from _.code where necessary'
         # track if there's inner brace syntax
-        required_brace:int = 0
+        required_brackets:int = 0
         for count, line in enumerate(_.code):
-            if '(' in line and not ')' in line: required_brace += 1
-            if ')' in line:
-                if required_brace == 0:
+            if opening_symbol in line and closing_symbol not in line:
+                required_brackets += 1
+            if closing_symbol in line:
+                required_brackets -= 1
+                if required_brackets <= 0:
                     content = ''.join(_.code[:count+1])
                     _.code = _.code[count+1:]
                     return content
-                else: required_brace -= 1
 
 
     def parse_assignment(_):
         assignment = _.code[0].strip().split('=')
-        DevLog(f'Assignment contents:{assignment}\n')
+        log(f'Assignment contents:{assignment}\n')
         assignee_name:str = assignment[0].strip()
         assignee:Object
         if _._try(lambda: _.namespaces[assignee_name]):
             assignee = _.namespaces[assignee_name]
-            # DevLog(f'Using an existing namespace: {assignee}')
         else:
             _.namespaces.update({assignee_name:Object(assignee_name)})
             assignee = _.namespaces[assignee_name]
-            # DevLog(f'Assigning new namespace: {asssignee_name}')
+            log(f'Assigning new namespace: {assignee_name}')
         assignment_str = assignment[1].strip()
         # needs to check if operation, call, or instantiation
         assignee.value = assignment_str
-        # DevLog(f'Assignment Object: {assignee}')
+        log(f'Assignment Object: {assignee}')
         _.code = _.code[1:]
 
 
     def parse_function(_):
-        content = _.find_closing_bracket()
-        DevLog(f'Function contents:{content}\n')
+        content = _.find_closing_symbol("{", "}")
+        log(f'Function contents:{content}\n')
 
 
     def parse_object(_):
-        content = _.find_closing_bracket()
-        DevLog(f'Object contents:{content}\n')
+        content = _.find_closing_symbol("{", "}")
+        log(f'Object contents:{content}\n')
 
 
     def parse_try(_):
@@ -202,5 +184,23 @@ class Interpreter:
 
 
     def parse_call(_):
-        content = _.find_closing_brace()
-        DevLog(f'Object contents:{content}\n')
+        content = _.find_closing_symbol("(", ")")
+        para_index = content.find("(")
+        caller = content[:para_index]
+        arguments = content[para_index+1:-1]
+        if ',' in arguments: # multiple arguments
+            arguments = ...
+        result = _.callables[caller](arguments)
+        log(f'Call contents:{content}\n')
+
+
+
+    def output(_, msg:str) -> None:
+        if msg[0] in ['"', "'"]:
+            msg = msg[1:-1]
+        else:
+            if not _._try(lambda: _.namespaces[msg]):
+                error(f'Unknown value: {msg}')
+                return
+            msg = _.namespaces[msg].value
+        print(msg)

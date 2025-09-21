@@ -15,7 +15,7 @@ print(f'(PyPapple) Pineapple {__version__}\n')
 
 
 if len(argv) <= 1:
-    print("Opening in REPL...\n")
+    print("No source file given\n")
 else:
     source_path:str = argv[1]
     if not path.exists(source_path):
