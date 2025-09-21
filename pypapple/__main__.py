@@ -15,12 +15,12 @@ print(f'(PyPapple) Pineapple {__version__}\n')
 
 
 if len(argv) <= 1:
-    print("Opening in REPL...")
+    print("Opening in REPL...\n")
 else:
     source_path:str = argv[1]
     if not path.exists(source_path):
         print('Invalid filename provided')
-    print(f'Reading {source_path}...')
+    print(f'Reading {source_path}...\n')
     
     code:List[str]
     with open(source_path, 'r') as code_file:
