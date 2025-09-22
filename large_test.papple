@@ -3,3 +3,29 @@
 blegh ~ comment
 
 invalid
+
+x = 10
+y = 3
+
+some_dict["x"] = 10
+
+x = 5
+
+x = 3
+
+Out(x)
+
+fnc add(x:int, y:int) sum:int {
+	sum = x + y
+} ~ sum is returned at the end of the code block
+
+value = add(5, 5)
+value = add(x=5, y=5)
+
+obj Cat {
+	name:String;
+	
+	fnc init(name) _ {
+		_.name = name
+	}
+}

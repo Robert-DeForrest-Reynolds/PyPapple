@@ -9,6 +9,9 @@ what does not need to be in the language:
  - standard library implementations Python already handles (string manipulation, packing/unpacking or structuring/destructuring, etc.)
  - quality of life implementations that are not paramount to the fundamental developer workflow
  - anything not really in the tech_doc.md
+
+
+
 '''
 
 from typing import List, Callable, Any
@@ -57,11 +60,18 @@ class Interpreter:
         _.interpreting = True
         _.unbounded_cycle_count = 32
         _.reserved = {
-            '=':_.parse_assignment,
+            # separation with a space is required
             'fnc':_.parse_function,
             'obj':_.parse_object,
             'try':_.parse_try,
+            'for':...,
+            'if':...,
+            'while':...,
+
+            # separation with a space is optional
             'Out':_.parse_call,
+
+            '=':_.parse_assignment,
         }
         _.callables = {
             "Out":lambda *args: _.output(*args)
@@ -85,6 +95,26 @@ class Interpreter:
 
 
     def parse(_):
+        '''
+        all reserved keywords are considered 'statement headers',
+        they are essentially ways to begin declaring some kind of
+        statement; they signify the `statement type`
+
+        the rest of a statement is considered `statement instructions`
+        they are the actions of a statement
+        
+        here are the known rules so far:
+        - spacing, and newlines are separators.
+
+        types of statement headers:
+        - assignment
+        - call
+        - class creation
+        - try statement
+        - if statement
+        - while loop
+        - for loop
+        '''
         # Remove comments from line
         _.code[0] = _.code[0].split("~")[0].strip()
         if len(_.code[0]) == 0:
@@ -92,39 +122,51 @@ class Interpreter:
             _.code = _.code[1:]
             return
 
-        potential_keyword = _.code[0].split(" ")[0]
-        if potential_keyword in _.reserved:
-            _.reserved[potential_keyword]()
+        # catches all space separated reserves
+        potential = _.code[0].split(" ")[0]
+        if potential in _.reserved:
+            _.reserved[potential]()
             return
         
-        potential_keyword = _.code[0].split("(")[0]
-        if potential_keyword in _.reserved:
-            _.reserved[potential_keyword]()
+        # catch calls
+        potential = _.code[0].split("(")[0].strip()
+        if potential in _.reserved:
+            _.reserved[potential]()
             return
-
-        for character in _.code[0]:
-            if character in _.reserved:
-                _.reserved[character]()
-                return
         
-        error_line:int = _.original_code.index(_.code[0])
-        error(f'Unparsable line, ignoring completely: `{potential_keyword}`', line=error_line)
-        _.code = _.code[1:]
+        # catch assignments, do this last as it's the heaviest
+        potential = _.code[0].split("=")
+        if len(potential) > 1:
+            try:
+                _.parse_assignment()
+            except:
+                error_line:int = _.original_code.index(_.code[0])
+                error(f'Unparsable line, ignoring completely: `{potential}`', line=error_line)
+                _.code = _.code[1:]
 
 
     def find_closing_symbol(_, opening_symbol:str, closing_symbol) -> str:
         'Removes code from _.code where necessary'
-        # track if there's inner brace syntax
         required_brackets:int = 0
+        small_quote = False
+        big_quote = False
         for count, line in enumerate(_.code):
-            if opening_symbol in line and closing_symbol not in line:
-                required_brackets += 1
-            if closing_symbol in line:
-                required_brackets -= 1
-                if required_brackets <= 0:
-                    content = ''.join(_.code[:count+1])
-                    _.code = _.code[count+1:]
-                    return content
+            for character in line:
+                if character == "'" and not big_quote:
+                    small_quote = not small_quote
+                    continue
+                if character == '"' and not small_quote:
+                    big_quote = not big_quote
+                    continue
+                if not small_quote and not big_quote:
+                    if character == opening_symbol:
+                        required_brackets += 1
+                    if character == closing_symbol:
+                        required_brackets -= 1
+            if required_brackets <= 0:
+                content = ''.join(_.code[:count+1])
+                _.code = _.code[count+1:]
+                return content
 
 
     def parse_assignment(_):
@@ -172,8 +214,7 @@ class Interpreter:
 
 
     def output(_, msg:str) -> None:
-        if msg[0] in ['"', "'"]:
-            msg = msg[1:-1]
+        if msg[0] in ['"', "'"]: msg = msg[1:-1]
         else:
             if msg not in _.namespaces:
                 error(f'Unknown value: {msg}')
