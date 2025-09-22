@@ -12,39 +12,35 @@ what does not need to be in the language:
 '''
 
 from typing import List, Callable, Any
+from sys import argv
+from os import path
+
+from .util import *
+from .p_object import P_Object
 
 
-BLACK   = '\033[30m'
-RED     = '\033[31m'
-GREEN   = '\033[32m'
-YELLOW  = '\033[33m'
-BLUE    = '\033[34m'
-MAGENTA = '\033[35m'
-CYAN    = '\033[36m'
-WHITE   = '\033[37m'
-RESET = '\033[0m'
+__version__:str
 
 
-class Object:
-    name:str
-    value:Any
-    def __init__(_, name):
-        log("Instantiating Object")
-        _.name = name
+def run():
+    with open('setup.cfg') as cfg:
+        __version__ = next(l.split('=')[1].strip() for l in cfg if l[:7] == "version")
 
-
-def log(msg:str, important:bool=False) -> None:
-    if important:
-        print(f'{YELLOW}{msg}{RESET}\n')
+    log(f'(PyPapple) Pineapple {__version__}\n')
+    
+    if len(argv) <= 1:
+        error("No source file given\n")
     else:
-        print(f'{GREEN}{msg}{RESET}\n')
-
-
-def error(msg:str, line:int=None):
-    if line:
-        print(f'{RED}Error at Line {line}:{RESET}\n{msg}\n')
-    else:
-        print(f'{RED}Error:{RESET}\n{msg}\n')
+        source_path:str = argv[1]
+        if not path.exists(source_path):
+            error('Invalid filename provided')
+        log(f'Reading {source_path}...\n')
+        
+        code:List[str]
+        with open(source_path, 'r') as code_file:
+            code = code_file.readlines()
+        
+        Interpreter(code=code)
 
 
 class Interpreter:
@@ -155,11 +151,11 @@ class Interpreter:
         assignment = _.code[0].strip().split('=')
         log(f'Assignment contents:{assignment}\n')
         assignee_name:str = assignment[0].strip()
-        assignee:Object
+        assignee:P_Object
         if _._try(lambda: _.namespaces[assignee_name]):
             assignee = _.namespaces[assignee_name]
         else:
-            _.namespaces.update({assignee_name:Object(assignee_name)})
+            _.namespaces.update({assignee_name:P_Object(assignee_name)})
             assignee = _.namespaces[assignee_name]
             log(f'Assigning new namespace: {assignee_name}')
         assignment_str = assignment[1].strip()
@@ -192,7 +188,6 @@ class Interpreter:
             arguments = ...
         result = _.callables[caller](arguments)
         log(f'Call contents:{content}\n')
-
 
 
     def output(_, msg:str) -> None:
