@@ -23,28 +23,25 @@ __version__:str
 
 
 def run():
+    if len(argv) <= 1: error("No source file given\n")
+    if '-d' in argv: environ['dev'] = '~'
+    source_path:str = next(arg for arg in argv if arg.endswith(".papple"))
+
+    global __version__
     with open('setup.cfg') as cfg:
         __version__ = next(l.split('=')[1].strip() for l in cfg if l[:7] == "version")
 
     log(f'(PyPapple) Pineapple {__version__}\n')
     
-    if len(argv) <= 1:
-        error("No source file given\n")
-    else:
-        source_path:str = argv[1]
-        if not path.exists(source_path):
-            error('Invalid filename provided')
-        log(f'Reading {source_path}...\n')
-        
-        code:List[str]
-        with open(source_path, 'r') as code_file:
-            code = code_file.readlines()
-        
-        if len(argv) == 3:
-            if argv[2] == '-d':
-                environ['dev'] = '~'
-        
-        Interpreter(code=code)
+    if not path.exists(source_path):  error('Invalid filename provided')
+    
+    log(f'Reading {source_path}...\n')
+    
+    code:List[str]
+    with open(source_path, 'r') as code_file:
+        code = code_file.readlines()
+    
+    Interpreter(code=code)
 
 
 class Interpreter:
@@ -77,61 +74,40 @@ class Interpreter:
 
 
     def execute_next(_) -> None:
-        try: line = _.code[0]
+        try: _.code[0]
         except IndexError:
             log('End of File reached')
             _.interpreting = False
             return
         
-        if len(line) != 0:
-            log(f'Parsing Line: {line}', important=True)
-            _.parse(line)
-        else: _.code.pop(0)
+        log(f'Parsing Line: {_.code[0]}', important=True)
+        _.parse()
 
 
-    def _try(_, function:Callable, optional_msg:str=None) -> bool:
-        '''
-        Try to execute the callable, and ignores any errors.\n
-        If function call produces a callable, it will call it; non-resursive.\n
-        Return True if function is executed, returns False elsewise.
-        '''
-        try:
-            result = function()
-            try:
-                if callable(result):
-                    result()
-            except Exception as e:
-                error(f'Error calling result in _try: {e}')
-            return True
-        except Exception as e:
-            if optional_msg:
-                log(optional_msg)
-                log(e)
-            return False
+    def parse(_):
+        # Remove comments from line
+        _.code[0] = _.code[0].split("~")[0].strip()
+        if len(_.code[0]) == 0:
+            log("Ignoring comment")
+            _.code = _.code[1:]
+            return
 
+        potential_keyword = _.code[0].split(" ")[0]
+        if potential_keyword in _.reserved:
+            _.reserved[potential_keyword]()
+            return
+        
+        potential_keyword = _.code[0].split("(")[0]
+        if potential_keyword in _.reserved:
+            _.reserved[potential_keyword]()
+            return
 
-    def parse(_, line:str):
-        for count, character in enumerate(line):
-            potential_keyword = line[:count+1]
-            if character == '~':
-                if line[:count].strip() != "":
-                    potential_keyword = line[:count].strip()
-                    if _._try(lambda: _.reserved[line[:count].strip()]):
-                        return
-                    else:
-                        error_line:int = _.original_code.index(line)
-                        error(f'Unknown keyword: `{potential_keyword.strip()}`', line=error_line)
-                # this needs to handle lines where the code comes before the comment
-                _.code = _.code[1:]
-                return
-            
-            if _._try(lambda: _.reserved[potential_keyword]):
-                return
-
-            if _._try(lambda: _.reserved[character]):
+        for character in _.code[0]:
+            if character in _.reserved:
+                _.reserved[character]()
                 return
         
-        error_line:int = _.original_code.index(line)
+        error_line:int = _.original_code.index(_.code[0])
         error(f'Unparsable line, ignoring completely: `{potential_keyword}`', line=error_line)
         _.code = _.code[1:]
 
@@ -153,17 +129,19 @@ class Interpreter:
 
     def parse_assignment(_):
         assignment = _.code[0].strip().split('=')
-        log(f'Assignment contents:{assignment}\n')
         assignee_name:str = assignment[0].strip()
         assignee:P_Object
-        if _._try(lambda: _.namespaces[assignee_name]):
+        if assignee_name in _.namespaces:
             assignee = _.namespaces[assignee_name]
         else:
             _.namespaces.update({assignee_name:P_Object(assignee_name)})
             assignee = _.namespaces[assignee_name]
         assignment_str = assignment[1].strip()
+        if assignment_str in _.namespaces:
+            assignee.value = _.namespaces[assignment_str]
         # needs to check if operation, call, or instantiation
         assignee.value = assignment_str
+        log(f'Assignment contents: name=`{assignee_name}`, value=`{assignee.value}`\n')
         log(f'Assignment Object: {assignee}')
         _.code = _.code[1:]
 
@@ -197,7 +175,7 @@ class Interpreter:
         if msg[0] in ['"', "'"]:
             msg = msg[1:-1]
         else:
-            if not _._try(lambda: _.namespaces[msg]):
+            if msg not in _.namespaces:
                 error(f'Unknown value: {msg}')
                 return
             msg = _.namespaces[msg].value
