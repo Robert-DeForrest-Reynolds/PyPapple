@@ -1,0 +1,20 @@
+x = 10
+y = 3
+
+x = 5
+
+x = 3
+
+Out(x)
+
+fnc add(x:int, y:int) sum:int {
+	sum = x + y
+} ~ sum is returned at the end of the code block
+
+obj Cat {
+	name:String;
+	
+	fnc init(name) _ {
+		_.name = name
+	}
+}

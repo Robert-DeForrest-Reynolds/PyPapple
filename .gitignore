@@ -3,5 +3,3 @@ __pycache__
 *.pyc
 dist
 *.egg-info
-
-test.papple
