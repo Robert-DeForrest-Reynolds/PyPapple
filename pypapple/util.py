@@ -1,3 +1,6 @@
+from os import environ
+
+
 BLACK   = '\033[30m'
 RED     = '\033[31m'
 GREEN   = '\033[32m'
@@ -11,11 +14,15 @@ RESET = '\033[0m'
 
 __all__ = ['log', 'error']
 
+
 def log(msg:str, important:bool=False) -> None:
-    if important:
-        print(f'{YELLOW}{msg}{RESET}\n')
-    else:
-        print(f'{GREEN}{msg}{RESET}\n')
+    try:
+        environ['dev']
+        if important:
+            print(f'{YELLOW}{msg}{RESET}\n')
+        else:
+            print(f'{GREEN}{msg}{RESET}\n')
+    except: pass
 
 
 def error(msg:str, line:int=None):

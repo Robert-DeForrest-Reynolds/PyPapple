@@ -13,7 +13,7 @@ what does not need to be in the language:
 
 from typing import List, Callable, Any
 from sys import argv
-from os import path
+from os import path, environ
 
 from .util import *
 from .p_object import P_Object
@@ -39,6 +39,10 @@ def run():
         code:List[str]
         with open(source_path, 'r') as code_file:
             code = code_file.readlines()
+        
+        if len(argv) == 3:
+            if argv[2] == '-d':
+                environ['dev'] = '~'
         
         Interpreter(code=code)
 
@@ -157,7 +161,6 @@ class Interpreter:
         else:
             _.namespaces.update({assignee_name:P_Object(assignee_name)})
             assignee = _.namespaces[assignee_name]
-            log(f'Assigning new namespace: {assignee_name}')
         assignment_str = assignment[1].strip()
         # needs to check if operation, call, or instantiation
         assignee.value = assignment_str
