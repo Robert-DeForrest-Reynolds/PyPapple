@@ -10,7 +10,6 @@ __all__ = ['P_out', 'P_in']
 
 
 def P_out(_:Interpreter, msg:str|list[str]) -> None:
-    log(f'P_out args: {msg}', important=True)
     output_values:list[str] = []
     if _.temp:
         for arg in msg:

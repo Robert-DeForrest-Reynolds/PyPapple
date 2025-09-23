@@ -1,6 +1,7 @@
 from typing import List, Callable, Any
 from os import environ
 from sys import getrecursionlimit, setrecursionlimit
+from copy import deepcopy
 from .util import *
 from .p_object import P_Object
 
@@ -16,6 +17,7 @@ class Function():
     return_item:Any
     def __init__(_, signature, content:str) -> None:
         _.signature = signature
+        _.content = content
         _.source = [instruction for instruction in content if instruction != '']
         _.namespaces = {}
         _.reserved = {}
@@ -29,6 +31,11 @@ class Function():
 
         log(f'Function namespace: {_.namespaces}')
         log(f'Function source: {_.source}')
+
+
+    def __call__(_):
+        log(f"Getting deep copy of {_.name}", important=True)
+        return deepcopy(_)
 
 
 class Interpreter:
@@ -110,7 +117,8 @@ class Interpreter:
             return
         log(f'Parsing Line: {_.code[0]}', important=True)
         _.return_item = _.parse()
-        log(f'Return item: {_.return_item}')
+        if _.return_item:
+            log(f'Return item: {_.return_item}', important=True)
         return _.return_item
 
 
@@ -124,7 +132,8 @@ class Interpreter:
         while len(_.code) > 0:
             log(f'Parsing Block Line: {_.code[0]}', important=True)
             _.return_item = _.parse()
-            log(f'Return item: {_.return_item}')
+            if _.return_item:
+                log(f'Return item: {_.return_item}', important=True)
         _.code = storage
         _.temp = False
         _.temp_namespaces = {}
@@ -226,7 +235,7 @@ class Interpreter:
         exit(0)
 
 
-    def evaluate_expression(_, expr:str):
+    def evaluate_expression(_, expr:str, assignee:P_Object=None):
         evaluation = ""
         expr_len = len(expr)-1
         last_addition_index = 0
@@ -244,8 +253,12 @@ class Interpreter:
                 evaluation += operative
                 
         try:
-            p_object = P_Object("none")
-            p_object.value = str(eval(evaluation))
+            if assignee:
+                assignee.value = str(eval(evaluation))
+                return assignee
+            else:
+                p_object = P_Object("eval_var")
+                p_object.value = str(eval(evaluation))
             return p_object
         except Exception:
             return None
@@ -275,7 +288,7 @@ class Interpreter:
             result = _.temp_reserved[potential]()
             assignee.value = result
         else:
-            new_assignee:P_Object = _.evaluate_expression(assignment_str)
+            new_assignee:P_Object = _.evaluate_expression(assignment_str, assignee=assignee)
             if new_assignee:
                 _.current_namespace[assignee_name] = new_assignee
 
@@ -331,16 +344,19 @@ class Interpreter:
         log(f'Call signature: {signature}\n')
         log(f'Call contents:{content}\n')
         passed_arguments = [c.strip() for c in content[0].split(",")]
-        log(f"Passing arguments to call {passed_arguments}")
-        if signature in _.namespaces:
-            f:Function = _.namespaces[signature]
-            for index, arg in enumerate(passed_arguments):
-                for name, value in f.namespaces.items():
-                    if value == None:
-                        f.namespaces[f.arguments[index]] = P_Object(name, arg)
-                        continue
+        if signature in _.current_namespace:
+            f:Function = _.current_namespace[signature]()
+            arg_count = len(f.namespaces.keys())
+            print(arg_count)
+            index = 0
+            for name, value in f.namespaces.items():
+                if index == arg_count: break
+                if value == None:
+                    print(f'name: {name}')
+                    f.namespaces[f.arguments[index]] = P_Object(name, passed_arguments[index])
+                    index += 1
+                    continue
             result = _.execute_function_body(f)
-            log(f'Namespace Callable return: {result}')
             return result
         elif signature in _.callables:
             result = _.callables[signature](passed_arguments)
