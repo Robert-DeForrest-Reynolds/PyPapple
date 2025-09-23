@@ -1,7 +1,7 @@
 x = 10
 y = 3
 
-out("{x}, {y}")
+out("x={x}, y={y}")
 
 fnc add(x, y) {
 	sum = x + y
