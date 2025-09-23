@@ -29,17 +29,17 @@ class Interpreter:
             'fnc':_.parse_function,
             'obj':_.parse_object,
             'try':_.parse_try,
-            'for':...,
-            'if':...,
-            'while':...,
+            'for':_.parse_for,
+            'if':_.parse_if,
+            'while':_.parse_while,
 
             # separation with a space is optional
-            'Out':_.parse_call,
+            'out':_.parse_call,
 
             '=':_.parse_assignment,
         }
         _.callables = {
-            "Out":lambda *args: output(_, *args)
+            "out":lambda *args: output(_, *args)
         }
         _.namespaces = {}
 
@@ -49,7 +49,6 @@ class Interpreter:
             _.execute_next()
             _.unbounded_cycle_count -= 1
         
-
 
     def execute_next(_) -> None:
         try: _.code[0]
@@ -67,26 +66,6 @@ class Interpreter:
 
 
     def parse(_):
-        '''
-        all reserved keywords are considered 'statement headers',
-        they are essentially ways to begin declaring some kind of
-        statement; they signify the `statement type`
-
-        the rest of a statement is considered `statement instructions`
-        they are the actions of a statement
-        
-        here are the known rules so far:
-        - spacing, and newlines are separators.
-
-        types of statement headers:
-        - assignment
-        - call
-        - class creation
-        - try statement
-        - if statement
-        - while loop
-        - for loop
-        '''
         # Remove comments from line
         _.code[0] = _.code[0].split("~")[0].strip()
         if len(_.code[0]) == 0:
@@ -186,6 +165,21 @@ class Interpreter:
     def parse_try(_):
         content = _.find_closing_symbol("{", "}")
         log(f'Try contents:{content}\n')
+
+
+    def parse_for(_):
+        content = _.find_closing_symbol("{", "}")
+        log(f'For contents:{content}\n')
+
+
+    def parse_while(_):
+        content = _.find_closing_symbol("{", "}")
+        log(f'While contents:{content}\n')
+
+
+    def parse_if(_):
+        content = _.find_closing_symbol("{", "}")
+        log(f'If contents:{content}\n')
 
 
     def parse_call(_):

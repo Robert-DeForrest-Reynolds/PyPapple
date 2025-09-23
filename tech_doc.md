@@ -44,14 +44,14 @@ _     | reference symbol for "owner" of the declaration, if used in scope of scr
 ~ convention: undetermined
 
 | Loop Assignment (raises runtime errors) |
-x = for num in numbers if num % 2 is 0;
+x = for num in numbers if num % 2 is 0
 
 | Conditional Assignment (raises runtime errors) |
-x = x if some_thing else none;
+x = x if some_thing else none
 
 | Inquiry Assignment (ignores runtime errors) |
-x = some_thing(); # fallback to none by default
-x = some_thing() ? 0; # fallback to 0
+x = some_thing() # fallback to none by default
+x = some_thing() ? 0 # fallback to 0
 
 
 
@@ -113,28 +113,28 @@ _glbls | all classes, functions, and variables in the global scope
 
 ~ some example code
 
-x = [1,2,3];      # array declaration
-y = {"a":1};      # dictionary declaration
+x = [1,2,3]      # array declaration
+y = {"a":1}      # dictionary declaration
 
 
 obj Cat {
-	name:String;
+	name:String
 	
 	fnc init(name) _ {
-		_.name = name;
+		_.name = name
 	}
 }
 
-greeting = "hello";
+greeting = "hello"
 
 fnc say(msg:String) {
-	Out(msg);
+	Out(msg)
 }
 
-say(greeting);
+say(greeting)
 
 fnc add(x:int, y:int) sum:int {
-	sum = x + y;
+	sum = x + y
 } ~ sum is returned at the end of the code block
 
 
@@ -151,25 +151,35 @@ Out(q, r)  # prints 2, 1
 
 
 try {
-	x = some_thing();
+	x = some_thing()
 } catch e:Error {
-	Out(e);
+	Out(e)
 }
 
 
-x = 5;
+x = 5
 
 fnc set_global() {
-    _.x = 10;  # modifies the global `x`, not a local shadow
-    x = 5;    # local variable with different value
+    _.x = 10  # modifies the global `x`, not a local shadow
+    x = 5    # local variable with different value
 }
 
 
 fnc validate(value:int) {
     if value < 0 {
-        error { Out("negative values not allowed") };
+        error { Out("negative values not allowed") }
     }
 }
+
+
+for i in items {
+    out(x)
+}
+
+for n in 10 {
+    out(x)
+}
+
 ```
 
 For managing packages, and installing them, all packages will be added to a repository as pull requests, and afterward being merged, users can use the built-in package manager to download specific packages, hopefully this is okay with GitHub? We can always change it.

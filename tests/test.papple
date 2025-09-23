@@ -5,14 +5,14 @@ x = 5
 
 x = 3
 
-Out(x)
+out(x)
 
-fnc add(x:int, y:int) sum:int {
+fnc add(x, y) sum {
 	sum = x + y
 } ~ sum is returned at the end of the code block
 
 obj Cat {
-	name:String;
+	name
 	
 	fnc init(name) _ {
 		_.name = name
@@ -21,10 +21,15 @@ obj Cat {
 
 try {
 	x = some_thing()
-} catch e:Error {
+} catch e {
 	Out(e)
 } x = 10
 
 
+items = ['apple', 'cherry', 'mango']
 
-Out(x)
+for i in items {
+    out(i)
+}
+
+out(x)
