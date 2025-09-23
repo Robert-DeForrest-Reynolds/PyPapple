@@ -12,16 +12,22 @@ WHITE   = '\033[37m'
 RESET = '\033[0m'
 
 
-__all__ = ['log', 'error']
+__all__ = ['log', 'error', 'info']
 
 
 def log(msg:str, important:bool=False) -> None:
     try:
-        environ['dev']
-        if important:
+        if environ['dev'] == 'important' or important:
             print(f'{YELLOW}{msg}{RESET}\n')
-        else:
+        elif environ['dev'] == 'log' or environ['dev'] == 'verbose':
             print(f'{GREEN}{msg}{RESET}\n')
+    except: pass
+
+
+def info(msg:str):
+    try:
+        if environ['dev'] == 'verbose':
+            print(f'{BLUE}{msg}{RESET}\n')
     except: pass
 
 

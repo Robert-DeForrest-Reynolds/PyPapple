@@ -293,8 +293,8 @@ class Interpreter:
                 _.current_namespace[assignee_name] = new_assignee
 
             else: assignee.value = assignment_str
-        log(f'Assignment contents: name=`{assignee_name}`, value=`{assignee.value}`\n')
-        log(f'Assignment Object: {assignee}')
+        info(f'Assignment contents: name=`{assignee_name}`, value=`{assignee.value}`\n')
+        info(f'Assignment Object: {assignee}')
         _.code = _.code[1:]
         return result
 
@@ -304,45 +304,45 @@ class Interpreter:
         f = Function(signature, content)
         _.reserved.update({f.name:_.parse_call})
         _.namespaces.update({f.name:f})
-        log(f'Function signature: {signature}\n')
-        log(f'Function contents: {content}\n')
+        info(f'Function signature: {signature}\n')
+        info(f'Function contents: {content}\n')
 
 
     def parse_object(_):
         signature, content = _.find_closing_symbol("{", "}")
-        log(f'Object signature: {signature}\n')
-        log(f'Object contents: {content}\n')
+        info(f'Object signature: {signature}\n')
+        info(f'Object contents: {content}\n')
 
 
     def parse_try(_):
         signature, content = _.find_closing_symbol("{", "}")
-        log(f'Try contents: {content}\n')
+        info(f'Try contents: {content}\n')
 
 
     def parse_for(_):
         signature, content = _.find_closing_symbol("{", "}")
-        log(f'For signature: {signature}\n')
-        log(f'For contents: {content}\n')
+        info(f'For signature: {signature}\n')
+        info(f'For contents: {content}\n')
 
 
     def parse_while(_):
         signature, content = _.find_closing_symbol("{", "}")
-        log(f'While signature: {signature}\n')
-        log(f'While contents: {content}\n')
+        info(f'While signature: {signature}\n')
+        info(f'While contents: {content}\n')
 
 
     def parse_if(_):
         signature, content = _.find_closing_symbol("{", "}")
-        log(f'If signature: {signature}\n')
-        log(f'If contents: {content}\n')
+        info(f'If signature: {signature}\n')
+        info(f'If contents: {content}\n')
 
 
     def parse_call(_):
         signature, content = _.find_closing_symbol("(", ")")
         if '=' in signature: 
             signature = signature[signature.find('=')+1:].strip()
-        log(f'Call signature: {signature}\n')
-        log(f'Call contents:{content}\n')
+        info(f'Call signature: {signature}\n')
+        info(f'Call contents:{content}\n')
         passed_arguments = [c.strip() for c in content[0].split(",")]
         if signature in _.current_namespace:
             f:Function = _.current_namespace[signature]()
@@ -358,5 +358,5 @@ class Interpreter:
             return result
         elif signature in _.callables:
             result = _.callables[signature](passed_arguments)
-            log(f'Callable return: {result}')
+            info(f'Callable return: {result}')
             return result

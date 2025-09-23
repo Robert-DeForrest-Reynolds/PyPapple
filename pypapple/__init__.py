@@ -29,9 +29,13 @@ def run():
     source_path:str = None
     argv_copy = argv.copy()
     for arg in argv:
-        if arg == '-d':
-            environ['dev'] = '~'
-            argv_copy.remove('-d')
+        if '-log' in arg:
+            log_type = arg.split('=')[1].strip()
+            if log_type in ['verbose', 'v', 'log', 'l', 'critical', 'c']:
+                if len(log_type) == 1:
+                    log_type = {'v':'verbose', 'l':'log', 'c':'critical'}[log_type]
+                environ['dev'] = log_type
+                argv_copy.remove(arg)
         elif '-max_cycles' in arg:
             try:
                 cycles = arg.split('=')[1].strip()
