@@ -86,6 +86,15 @@ class Interpreter:
             while _.interpreting and _.cycle_count != 0:
                 _.execute_next()
                 _.cycle_count -= 1
+
+    @property
+    def current_namespace(_) -> dict:
+        return _.temp_namespaces if _.temp else _.namespaces
+
+
+    @property
+    def current_reserved(_) -> dict:
+        return _.temp_reserved if _.temp else _.reserved
         
 
     def execute_next(_) -> None:
@@ -216,8 +225,8 @@ class Interpreter:
               line=_.current_line_index)
         exit(0)
 
+
     def evaluate_expression(_, expr:str):
-        tokens = expr.split()
         evaluation = ""
         expr_len = len(expr)-1
         last_addition_index = 0
@@ -225,33 +234,15 @@ class Interpreter:
             if char in ['+', '-', '*', '/']:
                 operative = expr[:index].strip()
                 last_addition_index = index
-                if _.temp:
-                    if operative in _.temp_namespaces:
-                        operative = _.temp_namespaces[operative].value
-                else:
-                    if operative in _.namespaces:
-                        operative = _.namespaces[operative].value
+                if operative in _.current_namespace:
+                    operative = _.current_namespace[operative].value
                 evaluation += operative + char
             elif index == expr_len:
-                operative = expr[last_addition_index:].strip()
-                if _.temp:
-                    if operative in _.temp_namespaces:
-                        operative = _.temp_namespaces[operative].value
-                else:
-                    if operative in _.namespaces:
-                        operative = _.namespaces[operative].value
-                        
-        leftover = expr[last_addition_index+1:].strip()
-        if _.temp:
-            if leftover in _.temp_namespaces:
-                leftover = _.temp_namespaces[leftover].value
-        else:
-            if leftover in _.namespaces:
-                leftover = _.namespaces[leftover].value
-        evaluation += leftover
-        
-
-        log(f'safe evaluation: {evaluation}')
+                operative = expr[last_addition_index+1:].strip()
+                if operative in _.current_namespace:
+                    operative = _.current_namespace[operative].value
+                evaluation += operative
+                
         try:
             p_object = P_Object("none")
             p_object.value = str(eval(evaluation))
@@ -264,27 +255,17 @@ class Interpreter:
         assignment = _.code[0].strip().split('=')
         assignee_name:str = assignment[0].strip()
         assignee:P_Object
-        if _.temp:
-            if assignee_name in _.temp_namespaces:
-                assignee = _.temp_namespaces[assignee_name]
-            else:
-                _.temp_namespaces.update({assignee_name:P_Object(assignee_name)})
-                assignee = _.temp_namespaces[assignee_name]
-            assignment_str = assignment[1].strip()
-            if assignment_str in _.temp_namespaces:
-                assignee.value = _.temp_namespaces[assignment_str]
+        if assignee_name in _.current_namespace:
+            assignee = _.current_namespace[assignee_name]
         else:
-            if assignee_name in _.namespaces:
-                assignee =_.namespaces[assignee_name]
-            else:
-                _.namespaces.update({assignee_name:P_Object(assignee_name)})
-                assignee = _.namespaces[assignee_name]
-            assignment_str = assignment[1].strip()
-            if assignment_str in _.namespaces:
-                assignee.value = _.namespaces[assignment_str]
-        # needs to check if operation, call, or instantiation
+            _.current_namespace.update({assignee_name:P_Object(assignee_name)})
+            assignee = _.current_namespace[assignee_name]
+        assignment_str = assignment[1].strip()
+        if assignment_str in _.current_namespace:
+            assignee.value = _.current_namespace[assignment_str]
 
-        # catch calls
+        # catch calls, and operations
+        # needs to check if instantiation still
         potential = assignment_str.split("(")[0].strip()
         result = None
         if potential in _.reserved:
@@ -296,10 +277,7 @@ class Interpreter:
         else:
             new_assignee:P_Object = _.evaluate_expression(assignment_str)
             if new_assignee:
-                if _.temp:
-                    _.temp_namespaces[assignee_name] = new_assignee
-                else:
-                    _.namespaces[assignee_name] = new_assignee
+                _.current_namespace[assignee_name] = new_assignee
 
             else: assignee.value = assignment_str
         log(f'Assignment contents: name=`{assignee_name}`, value=`{assignee.value}`\n')
