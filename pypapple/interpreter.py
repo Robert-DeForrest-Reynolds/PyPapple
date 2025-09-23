@@ -11,23 +11,23 @@ class Function():
     signature:str
     source:str
     arguments:list[str]
-    namespace:dict
+    namespaces:dict
     reserved:dict
     return_item:Any
     def __init__(_, signature, content:str) -> None:
         _.signature = signature
         _.source = [instruction for instruction in content if instruction != '']
-        _.namespace = {}
+        _.namespaces = {}
         _.reserved = {}
         split = _.signature.split('(')
         _.name = split[0].strip().split(" ")[1]
         split = split[1].split(")")
-        _.arguments = split[0].split(",")
+        _.arguments = [a.strip() for a in split[0].split(",") if a.strip()]
         _.return_item = split[1].strip() if split[1].strip() != '' else None
         for arg in _.arguments:
-            _.namespace.update({arg:None})
+            _.namespaces.update({arg:None})
 
-        log(f'Function namespace: {_.namespace}')
+        log(f'Function namespace: {_.namespaces}')
         log(f'Function source: {_.source}')
 
 
@@ -72,7 +72,7 @@ class Interpreter:
         _.temp = False
         _.temp_function_signature = 'fnc __temp__()'
         _.temp_reserved = {}
-        _.temp_namespace = {}
+        _.temp_namespaces = {}
         _.namespaces = {}
 
         _.return_item = None
@@ -110,7 +110,7 @@ class Interpreter:
         storage = _.code.copy()
         _.code = f.source
         _.temp = True
-        _.temp_namespace = f.namespace
+        _.temp_namespaces = f.namespaces
         _.temp_reserved = f.reserved
         while len(_.code) > 0:
             log(f'Parsing Block Line: {_.code[0]}', important=True)
@@ -118,10 +118,10 @@ class Interpreter:
             log(f'Return item: {_.return_item}')
         _.code = storage
         _.temp = False
-        _.temp_namespace = {}
+        _.temp_namespaces = {}
         _.temp_reserved = {}
         if f.return_item != None:
-            return f.namespace[f.return_item].value
+            return f.namespaces[f.return_item].value
         return _.return_item
 
 
@@ -222,13 +222,13 @@ class Interpreter:
         assignee_name:str = assignment[0].strip()
         assignee:P_Object
         if _.temp:
-            if assignee_name in _.temp_namespace: assignee = _.temp_namespace[assignee_name]
+            if assignee_name in _.temp_namespaces: assignee = _.temp_namespaces[assignee_name]
             else:
-                _.temp_namespace.update({assignee_name:P_Object(assignee_name)})
-                assignee = _.temp_namespace[assignee_name]
+                _.temp_namespaces.update({assignee_name:P_Object(assignee_name)})
+                assignee = _.temp_namespaces[assignee_name]
             assignment_str = assignment[1].strip()
-            if assignment_str in _.temp_namespace:
-                assignee.value = _.temp_namespace[assignment_str]
+            if assignment_str in _.temp_namespaces:
+                assignee.value = _.temp_namespaces[assignment_str]
         else:
             if assignee_name in _.namespaces: assignee = _.namespaces[assignee_name]
             else:
@@ -300,17 +300,18 @@ class Interpreter:
             signature = signature[signature.find('=')+1:].strip()
         log(f'Call signature: {signature}\n')
         log(f'Call contents:{content}\n')
-        passed_arguments = content[0].split(",")
+        passed_arguments = [c.strip() for c in content[0].split(",")]
+        log(f"Passing arguments to call {passed_arguments}")
         # print(signature)
         # print(_.namespaces)
         if signature in _.namespaces:
             f:Function = _.namespaces[signature]
             for index, arg in enumerate(passed_arguments):
-                f.namespace[f.arguments[index]] = arg
+                f.namespaces[f.arguments[index]] = arg
             result = _.execute_function_body(f)
             log(f'Namespace Callable return: {result}')
             return result
         elif signature in _.callables:
-            result = _.callables[signature](content)
+            result = _.callables[signature](passed_arguments)
             log(f'Callable return: {result}')
             return result

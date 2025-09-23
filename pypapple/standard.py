@@ -3,25 +3,40 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from interpreter import Interpreter
 
-from .util import error
+from .util import *
+
 
 __all__ = ['P_out', 'P_in']
 
+
 def P_out(_:Interpreter, msg:str|list[str]) -> None:
-    output_string = ""
-    for potential_str in msg:
-        if potential_str[0] in ['"', "'"]:
-            output_string += potential_str[1:-1]
+    output_values:list[str] = []
+    if _.temp:
+        for arg in msg:
+            if arg[0] in ['"', "'"]:
+                output_string += arg
+            else:
+                if arg not in _.temp_namespaces:
+                    error(f'Unknown temp value: {msg}')
+                    return
+                else:
+                    output_values.append(_.temp_namespaces[arg].value)
+    else:
+        for arg in msg:
+            if arg[0] in ['"', "'"]:
+                output_string += arg
+            else:
+                if arg not in _.namespaces:
+                    error(f'Unknown value: {msg}')
+                    return
+                else:
+                    output_values.append(_.namespaces[arg].value)
     if len(msg) == 1:
         msg = msg[0]
 
-    if _.temp:
-        msg = _.temp_namespace[msg].value
-    elif msg not in _.namespaces:
-        error(f'Unknown value: {msg}')
-        return
+    output_string = " ".join(output_values)
+    print(output_string)
 
-    print(msg)
 
 def P_in(_:Interpreter, prefix:str|list[str]="") -> str:
     actual = prefix.pop(0)
