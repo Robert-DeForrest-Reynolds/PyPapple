@@ -7,3 +7,4 @@ class P_Object:
     def __init__(_, name):
         log("Instantiating Object")
         _.name = name
+        _.value = None

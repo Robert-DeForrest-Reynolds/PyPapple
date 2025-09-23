@@ -24,9 +24,36 @@ __version__:str
 
 
 def run():
-    if len(argv) <= 1: error("No source file given\n")
-    if '-d' in argv: environ['dev'] = '~'
-    source_path:str = next(arg for arg in argv if arg.endswith(".papple"))
+    argv.pop(0)
+    if len(argv) == 0: error("No source file given\n")
+    source_path:str = None
+    argv_copy = argv.copy()
+    for arg in argv:
+        if arg == '-d':
+            environ['dev'] = '~'
+            argv_copy.remove('-d')
+        elif '-max_cycles' in arg:
+            try:
+                cycles = arg.split('=')[1].strip()
+                if int(cycles) <= 0: 
+                    print("-max_cycles must be more than 0")
+                    exit(1)
+                environ['-max_cycles'] = cycles
+                argv_copy.remove(arg)
+            except ValueError as e:
+                print("-max_cycles must be a valid number")
+                exit(0)
+        elif arg.endswith('.papple'):
+            source_path = arg
+            argv_copy.remove(arg)
+
+    if argv_copy:
+        error(f'Unparsable argument(s): {argv_copy}')
+        exit(0)
+
+    if not source_path:
+        error("No valid source path given")
+        exit(0)
 
     global __version__
     with open('setup.cfg') as cfg:

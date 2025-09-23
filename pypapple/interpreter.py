@@ -1,6 +1,6 @@
-
-
 from typing import List, Callable
+from os import environ
+from sys import getrecursionlimit, setrecursionlimit
 from .util import *
 from .p_object import P_Object
 
@@ -17,7 +17,12 @@ class Interpreter:
             _.code.append(stripped) if stripped != '' else None
         _.original_code = _.code.copy()
         _.interpreting = True
-        _.unbounded_cycle_count = 32
+        if '-max_cycles' in environ.keys():
+            cycle_count = int(environ['-max_cycles'])
+            _.unbounded_cycle_count = cycle_count
+            setrecursionlimit(cycle_count)
+        else:
+            _.unbounded_cycle_count = getrecursionlimit()
         _.reserved = {
             # separation with a space is required
             'fnc':_.parse_function,
@@ -48,7 +53,7 @@ class Interpreter:
             log('End of File reached')
             _.interpreting = False
             return
-        
+
         log(f'Parsing Line: {_.code[0]}', important=True)
         _.parse()
 
@@ -86,13 +91,13 @@ class Interpreter:
         if potential in _.reserved:
             _.reserved[potential]()
             return
-        
+
         # catch calls
         potential = _.code[0].split("(")[0].strip()
         if potential in _.reserved:
             _.reserved[potential]()
             return
-        
+
         # catch assignments, do this last as it's the heaviest
         potential = _.code[0].split("=")
         if len(potential) > 1:
@@ -100,7 +105,8 @@ class Interpreter:
                 _.parse_assignment()
             except:
                 error_line:int = _.original_code.index(_.code[0])
-                error(f'Unparsable line, ignoring completely: `{potential}`', line=error_line)
+                error(f'Unparsable line, ignoring completely: `{potential}`',
+                      line=error_line)
                 _.code = _.code[1:]
 
 
@@ -118,10 +124,8 @@ class Interpreter:
                     big_quote = not big_quote
                     continue
                 if not small_quote and not big_quote:
-                    if character == opening_symbol:
-                        required_brackets += 1
-                    if character == closing_symbol:
-                        required_brackets -= 1
+                    if character == opening_symbol: required_brackets += 1
+                    if character == closing_symbol: required_brackets -= 1
             if required_brackets <= 0:
                 content = ''.join(_.code[:count+1])
                 _.code = _.code[count+1:]
@@ -132,8 +136,7 @@ class Interpreter:
         assignment = _.code[0].strip().split('=')
         assignee_name:str = assignment[0].strip()
         assignee:P_Object
-        if assignee_name in _.namespaces:
-            assignee = _.namespaces[assignee_name]
+        if assignee_name in _.namespaces: assignee = _.namespaces[assignee_name]
         else:
             _.namespaces.update({assignee_name:P_Object(assignee_name)})
             assignee = _.namespaces[assignee_name]
