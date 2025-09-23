@@ -27,7 +27,7 @@ def P_out(_:Interpreter, msg:str|list[str]) -> None:
                         if item in _.current_namespace:
                             formatted += _.current_namespace[item].value
                         else:
-                            formatted += item
+                            formatted += item[1:]
                     print(formatted)
                 else:
                     error(f"mismatched formatting {arg}")
