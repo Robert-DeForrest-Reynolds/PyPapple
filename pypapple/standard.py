@@ -10,11 +10,11 @@ __all__ = ['P_out', 'P_in']
 
 
 def P_out(_:Interpreter, msg:str|list[str]) -> None:
+    log(f'P_out args: {msg}', important=True)
     output_values:list[str] = []
     if _.temp:
         for arg in msg:
-            if arg[0] in ['"', "'"]:
-                output_string += arg
+            if arg[0] in ['"', "'"]: output_string += arg
             else:
                 if arg not in _.temp_namespaces:
                     error(f'Unknown temp value: {msg}')

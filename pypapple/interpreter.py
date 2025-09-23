@@ -71,8 +71,8 @@ class Interpreter:
         }
         _.temp = False
         _.temp_function_signature = 'fnc __temp__()'
-        _.temp_reserved = {}
-        _.temp_namespaces = {}
+        _.temp_reserved:dict[str:Callable|P_Object|Function] = {}
+        _.temp_namespaces:dict[str:P_Object|Function] = {}
         _.namespaces = {}
 
         _.return_item = None
@@ -216,13 +216,57 @@ class Interpreter:
               line=_.current_line_index)
         exit(0)
 
+    def evaluate_expression(_, expr:str):
+        tokens = expr.split()
+        evaluation = ""
+        expr_len = len(expr)-1
+        last_addition_index = 0
+        for index, char in enumerate(expr):
+            if char in ['+', '-', '*', '/']:
+                operative = expr[:index].strip()
+                last_addition_index = index
+                if _.temp:
+                    if operative in _.temp_namespaces:
+                        operative = _.temp_namespaces[operative].value
+                else:
+                    if operative in _.namespaces:
+                        operative = _.namespaces[operative].value
+                evaluation += operative + char
+            elif index == expr_len:
+                operative = expr[last_addition_index:].strip()
+                if _.temp:
+                    if operative in _.temp_namespaces:
+                        operative = _.temp_namespaces[operative].value
+                else:
+                    if operative in _.namespaces:
+                        operative = _.namespaces[operative].value
+                        
+        leftover = expr[last_addition_index+1:].strip()
+        if _.temp:
+            if leftover in _.temp_namespaces:
+                leftover = _.temp_namespaces[leftover].value
+        else:
+            if leftover in _.namespaces:
+                leftover = _.namespaces[leftover].value
+        evaluation += leftover
+        
+
+        log(f'safe evaluation: {evaluation}')
+        try:
+            p_object = P_Object("none")
+            p_object.value = str(eval(evaluation))
+            return p_object
+        except Exception:
+            return None
+
 
     def parse_assignment(_):
         assignment = _.code[0].strip().split('=')
         assignee_name:str = assignment[0].strip()
         assignee:P_Object
         if _.temp:
-            if assignee_name in _.temp_namespaces: assignee = _.temp_namespaces[assignee_name]
+            if assignee_name in _.temp_namespaces:
+                assignee = _.temp_namespaces[assignee_name]
             else:
                 _.temp_namespaces.update({assignee_name:P_Object(assignee_name)})
                 assignee = _.temp_namespaces[assignee_name]
@@ -230,7 +274,8 @@ class Interpreter:
             if assignment_str in _.temp_namespaces:
                 assignee.value = _.temp_namespaces[assignment_str]
         else:
-            if assignee_name in _.namespaces: assignee = _.namespaces[assignee_name]
+            if assignee_name in _.namespaces:
+                assignee =_.namespaces[assignee_name]
             else:
                 _.namespaces.update({assignee_name:P_Object(assignee_name)})
                 assignee = _.namespaces[assignee_name]
@@ -249,7 +294,14 @@ class Interpreter:
             result = _.temp_reserved[potential]()
             assignee.value = result
         else:
-            assignee.value = assignment_str
+            new_assignee:P_Object = _.evaluate_expression(assignment_str)
+            if new_assignee:
+                if _.temp:
+                    _.temp_namespaces[assignee_name] = new_assignee
+                else:
+                    _.namespaces[assignee_name] = new_assignee
+
+            else: assignee.value = assignment_str
         log(f'Assignment contents: name=`{assignee_name}`, value=`{assignee.value}`\n')
         log(f'Assignment Object: {assignee}')
         _.code = _.code[1:]
@@ -302,12 +354,13 @@ class Interpreter:
         log(f'Call contents:{content}\n')
         passed_arguments = [c.strip() for c in content[0].split(",")]
         log(f"Passing arguments to call {passed_arguments}")
-        # print(signature)
-        # print(_.namespaces)
         if signature in _.namespaces:
             f:Function = _.namespaces[signature]
             for index, arg in enumerate(passed_arguments):
-                f.namespaces[f.arguments[index]] = arg
+                for name, value in f.namespaces.items():
+                    if value == None:
+                        f.namespaces[f.arguments[index]] = P_Object(name, arg)
+                        continue
             result = _.execute_function_body(f)
             log(f'Namespace Callable return: {result}')
             return result

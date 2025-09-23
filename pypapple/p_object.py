@@ -4,7 +4,7 @@ from .util import log
 class P_Object:
     name:str
     value:Any
-    def __init__(_, name):
+    def __init__(_, name, value = None):
         log("Instantiating Object")
         _.name = name
-        _.value = None
+        _.value = value

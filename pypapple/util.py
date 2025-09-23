@@ -30,3 +30,4 @@ def error(msg:str, line:int=None):
         print(f'{RED}Error at Line {line}:{RESET}\n{msg}\n')
     else:
         print(f'{RED}Error:{RESET}\n{msg}\n')
+    exit(0)
