@@ -347,7 +347,6 @@ class Interpreter:
         if signature in _.current_namespace:
             f:Function = _.current_namespace[signature]()
             arg_count = len(f.namespaces.keys())
-            print(arg_count)
             index = 0
             for name, value in f.namespaces.items():
                 if index == arg_count: break
