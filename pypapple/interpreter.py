@@ -150,7 +150,8 @@ class Interpreter:
                     _.current_line_index += line_index
                 return content
             
-        error(f"Unmatched `{opening_symbol}` (no closing `{closing_symbol}` found)", line=_.current_line_index)
+        error(f"Unmatched `{opening_symbol}` (no closing `{closing_symbol}` found)",
+              line=_.current_line_index)
         exit(0)
 
 
