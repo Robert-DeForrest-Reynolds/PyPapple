@@ -352,7 +352,6 @@ class Interpreter:
             for name, value in f.namespaces.items():
                 if index == arg_count: break
                 if value == None:
-                    print(f'name: {name}')
                     f.namespaces[f.arguments[index]] = P_Object(name, passed_arguments[index])
                     index += 1
                     continue
