@@ -9,7 +9,8 @@ out(x, y)
 
 fnc add(x, y) sum {
 	sum = x + y
-	out(sum)
-} ~ sum is returned at the end of the code block
+}
 
 x = add(5,5)
+
+out(x)
