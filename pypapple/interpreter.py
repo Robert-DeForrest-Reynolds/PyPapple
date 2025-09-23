@@ -236,22 +236,34 @@ class Interpreter:
 
 
     def evaluate_expression(_, expr:str, assignee:P_Object=None):
+        log(f'Expression expr: {expr}')
         evaluation = ""
         expr_len = len(expr)-1
         last_addition_index = 0
+        first_operative = False
         for index, char in enumerate(expr):
             if char in ['+', '-', '*', '/']:
-                operative = expr[:index].strip()
-                last_addition_index = index
+                if not first_operative:
+                    operative = expr[:index].strip()
+                    first_operative = True
+                    last_addition_index = index
+                else:
+                    operative = expr[last_addition_index+1:index].strip()
+                    last_addition_index = index
+
                 if operative in _.current_namespace:
                     operative = _.current_namespace[operative].value
-                evaluation += operative + char
+                    evaluation += operative + char
+                elif operative[0] in ["'", '"']:
+                    evaluation += operative + char
+
             elif index == expr_len:
                 operative = expr[last_addition_index+1:].strip()
                 if operative in _.current_namespace:
                     operative = _.current_namespace[operative].value
                 evaluation += operative
-                
+        
+        log(f'Expression evaluation: {evaluation}')
         try:
             if assignee:
                 assignee.value = str(eval(evaluation))
@@ -259,8 +271,10 @@ class Interpreter:
             else:
                 p_object = P_Object("eval_var")
                 p_object.value = str(eval(evaluation))
+            log("Evaluation Successful")
             return p_object
         except Exception:
+            log("Evaluation Unsuccessful")
             return None
 
 
@@ -343,7 +357,24 @@ class Interpreter:
             signature = signature[signature.find('=')+1:].strip()
         info(f'Call signature: {signature}\n')
         info(f'Call contents:{content}\n')
-        passed_arguments = [c.strip() for c in content[0].split(",")]
+        passed_arguments = []
+        last_comma_index = 0
+        required = 0
+        required_type = ""
+        for index, c in enumerate(content[0]):
+            if c == required_type:
+                required -= 1
+            elif c in ['"', "'"]:
+                required_type = c
+                required += 1
+            if c == ',' and required == 0:
+                passed_arguments.append(content[0][last_comma_index:index].strip())
+                last_comma_index = index
+        if required == 0 and passed_arguments == []:
+            passed_arguments.append(content[0])
+        else:
+            leftover = content[0][last_comma_index+1:]
+            passed_arguments.append(leftover)
         if signature in _.current_namespace:
             f:Function = _.current_namespace[signature]()
             arg_count = len(f.namespaces.keys())

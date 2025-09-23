@@ -14,16 +14,40 @@ def P_out(_:Interpreter, msg:str|list[str]) -> None:
     output_values:list[str] = []
     for arg in msg:
         if arg[0] in ['"', "'"]:
-            output_values += [arg[1:-1]]
-        else:
-            if arg not in _.current_namespace:
-                error(f'Unknown value: {msg}')
-                return
-            else:
-                if _.current_namespace[arg].value:
-                    output_values.append(_.current_namespace[arg].value)
+            formatted = ""
+            open_bracket_count = arg.count('{')
+            if open_bracket_count >= 1:
+                if open_bracket_count == arg.count('}'):
+                    actuals = []
+                    split = arg.split("}")
+                    for s in split:
+                        actuals.extend(s.split("{"))
+                    for item in actuals:
+                        if item in ["'", '"']: continue
+                        if item in _.current_namespace:
+                            formatted += _.current_namespace[item].value
+                        else:
+                            formatted += item
+                    print(formatted)
                 else:
-                    output_values.append("None")
+                    error(f"mismatched formatting {arg}")
+            else:
+                output_values += arg[1:-1]
+        else:
+            value = None
+            if arg in _.current_namespace:
+                if _.current_namespace[arg].value:
+                    value = _.current_namespace[arg].value
+                else:
+                    value = "None"
+            if not value:
+                value = str(_.evaluate_expression(arg).value)
+            
+            if value:
+                output_values.append(value)
+            else:
+                error(f'P_Out | Unknown value: {arg}')
+                return
     if len(msg) == 1:
         msg = msg[0]
 

@@ -189,3 +189,4 @@ Ideas for additions afterward completion:
  - `function are 'compiled' to actual python code for better reusability`, essentially creating a runtime compiler that can be used. this would probably be a complete rework to make the whole project compile to 'python' code before use, but that may also make implements other than functions slower. maybe we'll implement 'function compilation' of sorts only.
  - LSP for VSCode
  - Stupid little package manager for fun using the github repository idea
+ - better string formatting
