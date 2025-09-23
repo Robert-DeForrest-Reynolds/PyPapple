@@ -10,30 +10,24 @@ __all__ = ['P_out', 'P_in']
 
 
 def P_out(_:Interpreter, msg:str|list[str]) -> None:
+    log(f"P_out args: {msg}")
     output_values:list[str] = []
-    if _.temp:
-        for arg in msg:
-            if arg[0] in ['"', "'"]: output_string += arg
+    for arg in msg:
+        if arg[0] in ['"', "'"]:
+            output_values += [arg[1:-1]]
+        else:
+            if arg not in _.current_namespace:
+                error(f'Unknown value: {msg}')
+                return
             else:
-                if arg not in _.temp_namespaces:
-                    error(f'Unknown temp value: {msg}')
-                    return
+                if _.current_namespace[arg].value:
+                    output_values.append(_.current_namespace[arg].value)
                 else:
-                    output_values.append(_.temp_namespaces[arg].value)
-    else:
-        for arg in msg:
-            if arg[0] in ['"', "'"]:
-                output_string += arg
-            else:
-                if arg not in _.namespaces:
-                    error(f'Unknown value: {msg}')
-                    return
-                else:
-                    output_values.append(_.namespaces[arg].value)
+                    output_values.append("None")
     if len(msg) == 1:
         msg = msg[0]
 
-    output_string = " ".join(output_values)
+    output_string = "".join(output_values)
     print(output_string)
 
 

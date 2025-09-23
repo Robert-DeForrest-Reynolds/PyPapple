@@ -7,8 +7,9 @@ x = 3
 
 out(x, y)
 
-fnc add(x, y) sum {
+fnc add(x, y) {
 	sum = x + y
+	out("sum:", sum)
 }
 
 x = add(5,5)
