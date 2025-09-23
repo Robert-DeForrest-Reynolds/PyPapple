@@ -7,6 +7,9 @@ x = 3
 
 out(x)
 
+
+user_input = in(">")
+
 fnc add(x, y) sum {
 	sum = x + y
 	out(sum)

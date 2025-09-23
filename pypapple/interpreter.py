@@ -1,4 +1,4 @@
-from typing import List, Callable
+from typing import List, Callable, Any
 from os import environ
 from sys import getrecursionlimit, setrecursionlimit
 from .util import *
@@ -13,6 +13,7 @@ class Function():
     arguments:list[str]
     namespace:dict
     reserved:dict
+    return_item:Any
     def __init__(_, signature, content:str) -> None:
         _.signature = signature
         _.source = [instruction for instruction in content if instruction != '']
@@ -20,7 +21,9 @@ class Function():
         _.reserved = {}
         split = _.signature.split('(')
         _.name = split[0].strip().split(" ")[1]
-        _.arguments = split[1].split(")")[0].split(",")
+        split = split[1].split(")")
+        _.arguments = split[0].split(",")
+        _.return_item = split[1].strip() if split[1].strip() != '' else None
         for arg in _.arguments:
             _.namespace.update({arg:None})
 
@@ -58,16 +61,21 @@ class Interpreter:
 
             # separation with a space is optional
             'out':_.parse_call,
+            'in':_.parse_call,
 
             '=':_.parse_assignment,
         }
         _.callables = {
-            "out":lambda *args: output(_, *args)
+            "out":lambda *args: P_out(_, *args),
+            "in":lambda *args: P_in(_, *args),
         }
         _.temp = False
+        _.temp_function_signature = 'fnc __temp__()'
         _.temp_reserved = {}
         _.temp_namespace = {}
         _.namespaces = {}
+
+        _.return_item = None
 
         _.current_line_index:int = 0
 
@@ -92,10 +100,13 @@ class Interpreter:
             _.code = _.code[1:]
             return
         log(f'Parsing Line: {_.code[0]}', important=True)
-        _.parse()
+        _.return_item = _.parse()
+        log(f'Return item: {_.return_item}')
+        return _.return_item
 
 
-    def execute_function_body(_, f:Function) -> None:
+    def execute_function_body(_, f:Function) -> Any:
+        log(f'Executing: {f.name}')
         storage = _.code.copy()
         _.code = f.source
         _.temp = True
@@ -103,11 +114,15 @@ class Interpreter:
         _.temp_reserved = f.reserved
         while len(_.code) > 0:
             log(f'Parsing Block Line: {_.code[0]}', important=True)
-            _.parse()
+            _.return_item = _.parse()
+            log(f'Return item: {_.return_item}')
         _.code = storage
         _.temp = False
         _.temp_namespace = {}
         _.temp_reserved = {}
+        if f.return_item != None:
+            return f.namespace[f.return_item].value
+        return _.return_item
 
 
 
@@ -121,21 +136,22 @@ class Interpreter:
 
         # catches all space separated reserves
         potential = code.split(" ")[0].strip()
-        if potential in _.reserved or potential in _.temp_reserved:
-            _.reserved[potential]()
-            return
+        if potential in _.reserved:
+            return _.reserved[potential]()
+        elif potential in _.temp_reserved:
+            return _.temp_reserved[potential]()
 
         # catch calls
         potential = code.split("(")[0].strip()
-        if potential in _.reserved or potential in _.temp_reserved:
-            _.reserved[potential]()
-            return
+        if potential in _.reserved:
+            return _.reserved[potential]()
+        elif potential in _.temp_reserved:
+            return _.temp_reserved[potential]()
 
         # catch assignments, do this last as it's the heaviest
         for char in code:
             if char == '=':
-                _.parse_assignment()
-                return
+                return _.parse_assignment()
         
         
         error(f'Unparsable line: `{potential}`',
@@ -222,10 +238,22 @@ class Interpreter:
             if assignment_str in _.namespaces:
                 assignee.value = _.namespaces[assignment_str]
         # needs to check if operation, call, or instantiation
-        assignee.value = assignment_str
+
+        # catch calls
+        potential = assignment_str.split("(")[0].strip()
+        result = None
+        if potential in _.reserved:
+            result = _.reserved[potential]()
+            assignee.value = result
+        elif potential in _.temp_reserved:
+            result = _.temp_reserved[potential]()
+            assignee.value = result
+        else:
+            assignee.value = assignment_str
         log(f'Assignment contents: name=`{assignee_name}`, value=`{assignee.value}`\n')
         log(f'Assignment Object: {assignee}')
         _.code = _.code[1:]
+        return result
 
 
     def parse_function(_):
@@ -268,13 +296,21 @@ class Interpreter:
 
     def parse_call(_):
         signature, content = _.find_closing_symbol("(", ")")
+        if '=' in signature: 
+            signature = signature[signature.find('=')+1:].strip()
         log(f'Call signature: {signature}\n')
         log(f'Call contents:{content}\n')
         passed_arguments = content[0].split(",")
+        # print(signature)
+        # print(_.namespaces)
         if signature in _.namespaces:
             f:Function = _.namespaces[signature]
             for index, arg in enumerate(passed_arguments):
                 f.namespace[f.arguments[index]] = arg
             result = _.execute_function_body(f)
+            log(f'Namespace Callable return: {result}')
+            return result
         elif signature in _.callables:
             result = _.callables[signature](content)
+            log(f'Callable return: {result}')
+            return result
