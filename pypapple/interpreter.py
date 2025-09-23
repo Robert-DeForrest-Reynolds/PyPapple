@@ -10,14 +10,22 @@ from .standard import *
 class Function():
     signature:str
     source:str
+    arguments:list[str]
+    namespace:dict
+    reserved:dict
     def __init__(_, signature, content:str) -> None:
         _.signature = signature
         _.source = [instruction for instruction in content if instruction != '']
+        _.namespace = {}
+        _.reserved = {}
+        split = _.signature.split('(')
+        _.name = split[0].strip().split(" ")[1]
+        _.arguments = split[1].split(")")[0].split(",")
+        for arg in _.arguments:
+            _.namespace.update({arg:None})
+
+        log(f'Function namespace: {_.namespace}')
         log(f'Function source: {_.source}')
-
-
-    def validate():
-        ...
 
 
 class Interpreter:
@@ -34,10 +42,11 @@ class Interpreter:
         _.interpreting = True
         if '-max_cycles' in environ.keys():
             cycle_count = int(environ['-max_cycles'])
-            _.unbounded_cycle_count = cycle_count
+            _.cycle_count = cycle_count
             setrecursionlimit(cycle_count)
         else:
-            _.unbounded_cycle_count = getrecursionlimit()
+            _.cycle_count = -1
+            _.cycle_count = getrecursionlimit()
         _.reserved = {
             # separation with a space is required
             'fnc':_.parse_function,
@@ -55,13 +64,20 @@ class Interpreter:
         _.callables = {
             "out":lambda *args: output(_, *args)
         }
+        _.temp = False
+        _.temp_reserved = {}
+        _.temp_namespace = {}
         _.namespaces = {}
 
         _.current_line_index:int = 0
 
-        while _.interpreting and _.unbounded_cycle_count != 0:
-            _.execute_next()
-            _.unbounded_cycle_count -= 1
+        if _.cycle_count == -1:
+            while _.interpreting:
+                _.execute_next()
+        else:
+            while _.interpreting and _.cycle_count != 0:
+                _.execute_next()
+                _.cycle_count -= 1
         
 
     def execute_next(_) -> None:
@@ -79,35 +95,52 @@ class Interpreter:
         _.parse()
 
 
+    def execute_function_body(_, f:Function) -> None:
+        storage = _.code.copy()
+        _.code = f.source
+        _.temp = True
+        _.temp_namespace = f.namespace
+        _.temp_reserved = f.reserved
+        while len(_.code) > 0:
+            log(f'Parsing Block Line: {_.code[0]}', important=True)
+            _.parse()
+        _.code = storage
+        _.temp = False
+        _.temp_namespace = {}
+        _.temp_reserved = {}
+
+
+
     def parse(_):
         # Remove comments from line
-        _.code[0] = _.code[0].split("~")[0].strip()
-        if len(_.code[0]) == 0:
+        code = _.code[0].split("~")[0].strip()
+        if len(code) == 0:
             log("Ignoring comment")
             _.code = _.code[1:]
             return
 
         # catches all space separated reserves
-        potential = _.code[0].split(" ")[0].strip()
-        if potential in _.reserved:
+        potential = code.split(" ")[0].strip()
+        if potential in _.reserved or potential in _.temp_reserved:
             _.reserved[potential]()
             return
 
         # catch calls
-        potential = _.code[0].split("(")[0].strip()
-        if potential in _.reserved:
+        potential = code.split("(")[0].strip()
+        if potential in _.reserved or potential in _.temp_reserved:
             _.reserved[potential]()
             return
 
         # catch assignments, do this last as it's the heaviest
-        potential = _.code[0].split("=")
-        if len(potential) > 1:
-            try:
+        for char in code:
+            if char == '=':
                 _.parse_assignment()
-            except:
-                error(f'Unparsable line, ignoring completely: `{potential}`',
-                      line=_.current_line_index)
-                _.code = _.code[1:]
+                return
+        
+        
+        error(f'Unparsable line: `{potential}`',
+                line=_.current_line_index)
+        exit(0)
 
 
     def find_closing_symbol(_, opening_symbol:str, closing_symbol) -> list[str, list[str]]:
@@ -146,14 +179,14 @@ class Interpreter:
                 content:list = []
                 if open_line_index == line_index:
                     content.append(_.code[open_line_index][open_char_index+1:-1])
-                    print(f'content: {content}')
                 else:
                     if _.code[open_line_index][open_char_index+1:] != '':
                         content.append(_.code[open_line_index][open_char_index+1:])
+                    
                     content.extend(_.code[open_line_index+1:line_index])
+                    
                     if _.code[line_index][0].strip() != closing_symbol:
                         content.append(_.code[line_index][:char_index])
-                    print(f'content: {content}')
                 leftover = line[last_symbol_index+1:]
                 if leftover and not leftover.strip().startswith("~"):
                     _.code = [leftover] + _.code[line_index+1:]
@@ -172,13 +205,22 @@ class Interpreter:
         assignment = _.code[0].strip().split('=')
         assignee_name:str = assignment[0].strip()
         assignee:P_Object
-        if assignee_name in _.namespaces: assignee = _.namespaces[assignee_name]
+        if _.temp:
+            if assignee_name in _.temp_namespace: assignee = _.temp_namespace[assignee_name]
+            else:
+                _.temp_namespace.update({assignee_name:P_Object(assignee_name)})
+                assignee = _.temp_namespace[assignee_name]
+            assignment_str = assignment[1].strip()
+            if assignment_str in _.temp_namespace:
+                assignee.value = _.temp_namespace[assignment_str]
         else:
-            _.namespaces.update({assignee_name:P_Object(assignee_name)})
-            assignee = _.namespaces[assignee_name]
-        assignment_str = assignment[1].strip()
-        if assignment_str in _.namespaces:
-            assignee.value = _.namespaces[assignment_str]
+            if assignee_name in _.namespaces: assignee = _.namespaces[assignee_name]
+            else:
+                _.namespaces.update({assignee_name:P_Object(assignee_name)})
+                assignee = _.namespaces[assignee_name]
+            assignment_str = assignment[1].strip()
+            if assignment_str in _.namespaces:
+                assignee.value = _.namespaces[assignment_str]
         # needs to check if operation, call, or instantiation
         assignee.value = assignment_str
         log(f'Assignment contents: name=`{assignee_name}`, value=`{assignee.value}`\n')
@@ -189,6 +231,8 @@ class Interpreter:
     def parse_function(_):
         signature, content = _.find_closing_symbol("{", "}")
         f = Function(signature, content)
+        _.reserved.update({f.name:_.parse_call})
+        _.namespaces.update({f.name:f})
         log(f'Function signature: {signature}\n')
         log(f'Function contents: {content}\n')
 
@@ -226,4 +270,11 @@ class Interpreter:
         signature, content = _.find_closing_symbol("(", ")")
         log(f'Call signature: {signature}\n')
         log(f'Call contents:{content}\n')
-        result = _.callables[signature](content)
+        passed_arguments = content[0].split(",")
+        if signature in _.namespaces:
+            f:Function = _.namespaces[signature]
+            for index, arg in enumerate(passed_arguments):
+                f.namespace[f.arguments[index]] = arg
+            result = _.execute_function_body(f)
+        elif signature in _.callables:
+            result = _.callables[signature](content)

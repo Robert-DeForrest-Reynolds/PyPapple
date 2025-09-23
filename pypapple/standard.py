@@ -14,9 +14,11 @@ def output(_:Interpreter, msg:str|list[str]) -> None:
             output_string += potential_str[1:-1]
     if len(msg) == 1:
         msg = msg[0]
-    else:
-        if msg not in _.namespaces:
-            error(f'Unknown value: {msg}')
-            return
-        msg = _.namespaces[msg].value
+
+    if _.temp:
+        msg = _.temp_namespace[msg].value
+    elif msg not in _.namespaces:
+        error(f'Unknown value: {msg}')
+        return
+
     print(msg)

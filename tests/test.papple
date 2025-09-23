@@ -9,8 +9,10 @@ out(x)
 
 fnc add(x, y) sum {
 	sum = x + y
+	out(sum)
 } ~ sum is returned at the end of the code block
 
+add(5,5)
 
 
 obj Cat {

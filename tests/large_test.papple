@@ -1,9 +1,5 @@
 ~ comment
 
-blegh ~ comment
-
-invalid
-
 x = 10
 y = 3
 
@@ -13,7 +9,7 @@ x = 5
 
 x = 3
 
-Out(x)
+out(x)
 
 fnc add(x:int, y:int) sum:int {
 	sum = x + y
@@ -42,7 +38,7 @@ out(x)
 try {
 	x = some_thing()
 } catch e {
-	Out(e)
+	out(e)
 } x = 10
 
 
