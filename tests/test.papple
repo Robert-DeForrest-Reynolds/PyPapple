@@ -11,25 +11,12 @@ fnc add(x, y) sum {
 	sum = x + y
 } ~ sum is returned at the end of the code block
 
+
+
 obj Cat {
-	name
+	name:String
 	
 	fnc init(name) _ {
 		_.name = name
 	}
 }
-
-try {
-	x = some_thing()
-} catch e {
-	Out(e)
-} x = 10
-
-
-items = ['apple', 'cherry', 'mango']
-
-for i in items {
-    out(i)
-}
-
-out(x)

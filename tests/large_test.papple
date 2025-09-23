@@ -23,9 +23,42 @@ value = add(5, 5)
 value = add(x=5, y=5)
 
 obj Cat {
-	name:String;
+	name:String
 	
 	fnc init(name) _ {
 		_.name = name
 	}
+}
+
+x = 10
+y = 3
+
+x = 5
+
+x = 3
+
+out(x)
+
+try {
+	x = some_thing()
+} catch e {
+	Out(e)
+} x = 10
+
+
+items = ['apple', 'cherry', 'mango']
+
+for i in items {
+    out(i)
+}
+
+out(x)
+
+
+if x is 10 {
+	out('x is 10')
+} elif x is 5 {
+	out('x is 5')
+} else {
+	out('x is something else')
 }

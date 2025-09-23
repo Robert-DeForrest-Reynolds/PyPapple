@@ -6,6 +6,20 @@ from .p_object import P_Object
 
 from .standard import *
 
+
+class Function():
+    signature:str
+    source:str
+    def __init__(_, signature, content:str) -> None:
+        _.signature = signature
+        _.source = [instruction for instruction in content if instruction != '']
+        log(f'Function source: {_.source}')
+
+
+    def validate():
+        ...
+
+
 class Interpreter:
     code:List[str]
     original_code:List[str]
@@ -74,7 +88,7 @@ class Interpreter:
             return
 
         # catches all space separated reserves
-        potential = _.code[0].split(" ")[0]
+        potential = _.code[0].split(" ")[0].strip()
         if potential in _.reserved:
             _.reserved[potential]()
             return
@@ -96,12 +110,16 @@ class Interpreter:
                 _.code = _.code[1:]
 
 
-    def find_closing_symbol(_, opening_symbol:str, closing_symbol) -> str:
+    def find_closing_symbol(_, opening_symbol:str, closing_symbol) -> list[str, list[str]]:
         'Removes code from _.code where necessary'
         required_brackets:int = 0
-        small_quote = False
         content:str
+        small_quote = False
         big_quote = False
+        first_bracket = False
+        signature = ""
+        open_line_index = 0
+        open_char_index = 0
         for line_index, line in enumerate(_.code):
             last_symbol_index:int = 0
             line:str
@@ -113,13 +131,29 @@ class Interpreter:
                     big_quote = not big_quote
                     continue
                 if not small_quote and not big_quote:
-                    if character == opening_symbol: required_brackets += 1
+                    if character == opening_symbol:
+                        if first_bracket == False:
+                            signature = line[:char_index].strip()
+                            open_line_index = line_index
+                            open_char_index = char_index
+                            first_bracket = True
+                        required_brackets += 1
                     if character == closing_symbol:
                         last_symbol_index:int = char_index
                         required_brackets -= 1
                         
             if required_brackets == 0:
-                content = ''.join(_.code[:line_index]) + line[:last_symbol_index+1]
+                content:list = []
+                if open_line_index == line_index:
+                    content.append(_.code[open_line_index][open_char_index+1:-1])
+                    print(f'content: {content}')
+                else:
+                    if _.code[open_line_index][open_char_index+1:] != '':
+                        content.append(_.code[open_line_index][open_char_index+1:])
+                    content.extend(_.code[open_line_index+1:line_index])
+                    if _.code[line_index][0].strip() != closing_symbol:
+                        content.append(_.code[line_index][:char_index])
+                    print(f'content: {content}')
                 leftover = line[last_symbol_index+1:]
                 if leftover and not leftover.strip().startswith("~"):
                     _.code = [leftover] + _.code[line_index+1:]
@@ -127,7 +161,7 @@ class Interpreter:
                 else:
                     _.code = _.code[line_index+1:]
                     _.current_line_index += line_index
-                return content
+                return signature, content
             
         error(f"Unmatched `{opening_symbol}` (no closing `{closing_symbol}` found)",
               line=_.current_line_index)
@@ -153,41 +187,43 @@ class Interpreter:
 
 
     def parse_function(_):
-        content = _.find_closing_symbol("{", "}")
-        log(f'Function contents:{content}\n')
+        signature, content = _.find_closing_symbol("{", "}")
+        f = Function(signature, content)
+        log(f'Function signature: {signature}\n')
+        log(f'Function contents: {content}\n')
 
 
     def parse_object(_):
-        content = _.find_closing_symbol("{", "}")
-        log(f'Object contents:{content}\n')
+        signature, content = _.find_closing_symbol("{", "}")
+        log(f'Object signature: {signature}\n')
+        log(f'Object contents: {content}\n')
 
 
     def parse_try(_):
-        content = _.find_closing_symbol("{", "}")
-        log(f'Try contents:{content}\n')
+        signature, content = _.find_closing_symbol("{", "}")
+        log(f'Try contents: {content}\n')
 
 
     def parse_for(_):
-        content = _.find_closing_symbol("{", "}")
-        log(f'For contents:{content}\n')
+        signature, content = _.find_closing_symbol("{", "}")
+        log(f'For signature: {signature}\n')
+        log(f'For contents: {content}\n')
 
 
     def parse_while(_):
-        content = _.find_closing_symbol("{", "}")
-        log(f'While contents:{content}\n')
+        signature, content = _.find_closing_symbol("{", "}")
+        log(f'While signature: {signature}\n')
+        log(f'While contents: {content}\n')
 
 
     def parse_if(_):
-        content = _.find_closing_symbol("{", "}")
-        log(f'If contents:{content}\n')
+        signature, content = _.find_closing_symbol("{", "}")
+        log(f'If signature: {signature}\n')
+        log(f'If contents: {content}\n')
 
 
     def parse_call(_):
-        content = _.find_closing_symbol("(", ")")
-        para_index = content.find("(")
-        caller = content[:para_index]
-        arguments = content[para_index+1:-1]
-        if ',' in arguments: # multiple arguments
-            arguments = ...
-        result = _.callables[caller](arguments)
+        signature, content = _.find_closing_symbol("(", ")")
+        log(f'Call signature: {signature}\n')
         log(f'Call contents:{content}\n')
+        result = _.callables[signature](content)

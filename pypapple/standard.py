@@ -7,8 +7,13 @@ from .util import error
 
 __all__ = ['output']
 
-def output(_:Interpreter, msg:str) -> None:
-    if msg[0] in ['"', "'"]: msg = msg[1:-1]
+def output(_:Interpreter, msg:str|list[str]) -> None:
+    output_string = ""
+    for potential_str in msg:
+        if potential_str[0] in ['"', "'"]:
+            output_string += potential_str[1:-1]
+    if len(msg) == 1:
+        msg = msg[0]
     else:
         if msg not in _.namespaces:
             error(f'Unknown value: {msg}')
