@@ -12,8 +12,7 @@ fnc add(x, y) sum {
 	out(sum)
 } ~ sum is returned at the end of the code block
 
-add(5,5)
-
+x = add(5,5)
 
 obj Cat {
 	name:String

@@ -83,7 +83,7 @@ class Interpreter:
     def execute_next(_) -> None:
         try: _.code[0]
         except IndexError:
-            log('End of File reached')
+            log('End of file reached')
             _.interpreting = False
             return
 
