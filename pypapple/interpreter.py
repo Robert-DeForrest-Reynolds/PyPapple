@@ -10,11 +10,12 @@ class Interpreter:
     code:List[str]
     original_code:List[str]
     keywords:dict[str,Callable]
+    current_line_index:int
     def __init__(_, code:List[str]=None) -> None:
         _.code = []
         for line in code:
             stripped = line.strip()
-            _.code.append(stripped) if stripped != '' else None
+            _.code.append(stripped)
         _.original_code = _.code.copy()
         _.interpreting = True
         if '-max_cycles' in environ.keys():
@@ -42,9 +43,12 @@ class Interpreter:
         }
         _.namespaces = {}
 
+        _.current_line_index:int = 0
+
         while _.interpreting and _.unbounded_cycle_count != 0:
             _.execute_next()
             _.unbounded_cycle_count -= 1
+        
 
 
     def execute_next(_) -> None:
@@ -54,6 +58,10 @@ class Interpreter:
             _.interpreting = False
             return
 
+        _.current_line_index += 1
+        if _.code[0] == '':
+            _.code = _.code[1:]
+            return
         log(f'Parsing Line: {_.code[0]}', important=True)
         _.parse()
 
@@ -104,9 +112,8 @@ class Interpreter:
             try:
                 _.parse_assignment()
             except:
-                error_line:int = _.original_code.index(_.code[0])
                 error(f'Unparsable line, ignoring completely: `{potential}`',
-                      line=error_line)
+                      line=_.current_line_index)
                 _.code = _.code[1:]
 
 
@@ -114,9 +121,12 @@ class Interpreter:
         'Removes code from _.code where necessary'
         required_brackets:int = 0
         small_quote = False
+        content:str
         big_quote = False
-        for count, line in enumerate(_.code):
-            for character in line:
+        for line_index, line in enumerate(_.code):
+            last_symbol_index:int = 0
+            line:str
+            for char_index, character in enumerate(line):
                 if character == "'" and not big_quote:
                     small_quote = not small_quote
                     continue
@@ -125,11 +135,23 @@ class Interpreter:
                     continue
                 if not small_quote and not big_quote:
                     if character == opening_symbol: required_brackets += 1
-                    if character == closing_symbol: required_brackets -= 1
-            if required_brackets <= 0:
-                content = ''.join(_.code[:count+1])
-                _.code = _.code[count+1:]
+                    if character == closing_symbol:
+                        last_symbol_index:int = char_index
+                        required_brackets -= 1
+                        
+            if required_brackets == 0:
+                content = ''.join(_.code[:line_index]) + line[:last_symbol_index+1]
+                leftover = line[last_symbol_index+1:]
+                if leftover and not leftover.strip().startswith("~"):
+                    _.code = [leftover] + _.code[line_index+1:]
+                    _.current_line_index += line_index
+                else:
+                    _.code = _.code[line_index+1:]
+                    _.current_line_index += line_index
                 return content
+            
+        error(f"Unmatched `{opening_symbol}` (no closing `{closing_symbol}` found)", line=_.current_line_index)
+        exit(0)
 
 
     def parse_assignment(_):
@@ -161,7 +183,8 @@ class Interpreter:
 
 
     def parse_try(_):
-        ...
+        content = _.find_closing_symbol("{", "}")
+        log(f'Try contents:{content}\n')
 
 
     def parse_call(_):

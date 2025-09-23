@@ -18,3 +18,13 @@ obj Cat {
 		_.name = name
 	}
 }
+
+try {
+	x = some_thing()
+} catch e:Error {
+	Out(e)
+} x = 10
+
+
+
+Out(x)
