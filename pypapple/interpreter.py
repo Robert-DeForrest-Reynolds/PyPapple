@@ -353,14 +353,16 @@ class Interpreter:
 
     def parse_call(_):
         signature, content = _.find_closing_symbol("(", ")")
-        if '=' in signature: 
+        if '=' in signature: # check if function call is assignment
             signature = signature[signature.find('=')+1:].strip()
         info(f'Call signature: {signature}\n')
         info(f'Call contents:{content}\n')
+        
         passed_arguments = []
         last_comma_index = 0
         required = 0
         required_type = ""
+
         for index, c in enumerate(content[0]):
             if c == required_type:
                 required -= 1
@@ -370,11 +372,13 @@ class Interpreter:
             if c == ',' and required == 0:
                 passed_arguments.append(content[0][last_comma_index:index].strip())
                 last_comma_index = index
+
         if required == 0 and passed_arguments == []:
             passed_arguments.append(content[0])
         else:
             leftover = content[0][last_comma_index+1:]
             passed_arguments.append(leftover)
+
         if signature in _.current_namespace:
             f:Function = _.current_namespace[signature]()
             arg_count = len(f.namespaces.keys())
