@@ -21,11 +21,15 @@ class Function():
         _.source = [instruction for instruction in content if instruction != '']
         _.namespaces = {}
         _.reserved = {}
+        
         split = _.signature.split('(')
         _.name = split[0].strip().split(" ")[1]
         split = split[1].split(")")
+
         _.arguments = [a.strip() for a in split[0].split(",") if a.strip()]
+
         _.return_item = split[1].strip() if split[1].strip() != '' else None
+
         for arg in _.arguments:
             _.namespaces.update({arg:None})
 
@@ -45,11 +49,14 @@ class Interpreter:
     current_line_index:int
     def __init__(_, code:List[str]=None) -> None:
         _.code = []
+
         for line in code:
             stripped = line.strip()
             _.code.append(stripped)
+
         _.original_code = _.code.copy()
         _.interpreting = True
+
         if '-max_cycles' in environ.keys():
             cycle_count = int(environ['-max_cycles'])
             _.cycle_count = cycle_count
@@ -57,6 +64,8 @@ class Interpreter:
         else:
             _.cycle_count = -1
             _.cycle_count = getrecursionlimit()
+
+        _.namespaces = {}
         _.reserved = {
             # separation with a space is required
             'fnc':_.parse_function,
@@ -72,15 +81,16 @@ class Interpreter:
 
             '=':_.parse_assignment,
         }
+
         _.callables = {
             "out":lambda *args: P_out(_, *args),
             "in":lambda *args: P_in(_, *args),
         }
+
         _.temp = False
         _.temp_function_signature = 'fnc __temp__()'
         _.temp_reserved:dict[str:Callable|P_Object|Function] = {}
         _.temp_namespaces:dict[str:P_Object|Function] = {}
-        _.namespaces = {}
 
         _.return_item = None
 
@@ -112,13 +122,17 @@ class Interpreter:
             return
 
         _.current_line_index += 1
+
         if _.code[0] == '':
             _.code = _.code[1:]
             return
+        
         log(f'Parsing Line: {_.code[0]}', important=True)
         _.return_item = _.parse()
+
         if _.return_item:
             log(f'Return item: {_.return_item}', important=True)
+
         return _.return_item
 
 
@@ -129,19 +143,22 @@ class Interpreter:
         _.temp = True
         _.temp_namespaces = f.namespaces
         _.temp_reserved = f.reserved
+
         while len(_.code) > 0:
             log(f'Parsing Block Line: {_.code[0]}', important=True)
             _.return_item = _.parse()
             if _.return_item:
                 log(f'Return item: {_.return_item}', important=True)
+
         _.code = storage
         _.temp = False
         _.temp_namespaces = {}
         _.temp_reserved = {}
+
         if f.return_item != None:
             return f.namespaces[f.return_item].value
+        
         return _.return_item
-
 
 
     def parse(_):
@@ -282,12 +299,14 @@ class Interpreter:
         assignment = _.code[0].strip().split('=')
         assignee_name:str = assignment[0].strip()
         assignee:P_Object
+        
         if assignee_name in _.current_namespace:
             assignee = _.current_namespace[assignee_name]
         else:
             _.current_namespace.update({assignee_name:P_Object(assignee_name)})
             assignee = _.current_namespace[assignee_name]
         assignment_str = assignment[1].strip()
+
         if assignment_str in _.current_namespace:
             assignee.value = _.current_namespace[assignment_str]
 
@@ -307,6 +326,7 @@ class Interpreter:
                 _.current_namespace[assignee_name] = new_assignee
 
             else: assignee.value = assignment_str
+        
         info(f'Assignment contents: name=`{assignee_name}`, value=`{assignee.value}`\n')
         info(f'Assignment Object: {assignee}')
         _.code = _.code[1:]
@@ -369,6 +389,7 @@ class Interpreter:
             elif c in ['"', "'"]:
                 required_type = c
                 required += 1
+                
             if c == ',' and required == 0:
                 passed_arguments.append(content[0][last_comma_index:index].strip())
                 last_comma_index = index
@@ -382,6 +403,7 @@ class Interpreter:
         if signature in _.current_namespace:
             f:Function = _.current_namespace[signature]()
             arg_count = len(f.namespaces.keys())
+
             index = 0
             for name, value in f.namespaces.items():
                 if index == arg_count: break
@@ -389,6 +411,7 @@ class Interpreter:
                     f.namespaces[f.arguments[index]] = P_Object(name, passed_arguments[index])
                     index += 1
                     continue
+
             result = _.execute_function_body(f)
             return result
         elif signature in _.callables:

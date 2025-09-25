@@ -1,6 +1,7 @@
 x = 10
 y = 3
 
+
 out("x={x}, y={y}")
 
 fnc add(x, y) {
@@ -11,3 +12,7 @@ fnc add(x, y) {
 x = add(5,5)
 
 out(x)
+
+if
+
+while
