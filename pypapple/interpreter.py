@@ -18,7 +18,6 @@ class Interpreter:
     current_line_index:int
     def __init__(_, code:list[str]=None) -> None:
         _.code = code
-        print(_.code)
 
         _.original_code = _.code.copy()
         _.interpreting = True
@@ -292,10 +291,7 @@ class Interpreter:
         f = Function(tokens)
 
         _.current_callables.update({f.name:f})
-        print(_.code)
-        print(line_count)
         _.code = _.code[line_count:]
-        print(_.code)
         info(f'{function_name}\'s tokens: {tokens}')
         return ...
     
@@ -305,7 +301,6 @@ class Interpreter:
         storage = _.code.copy()
         _.code = f.block
         args:list = [arg.strip() for arg in args.split(',')]
-        print(_.current_namespace)
         for arg in args:
             if arg in _.current_namespace:
                 f.namespaces[arg] = _.current_namespace[arg]
@@ -317,8 +312,6 @@ class Interpreter:
 
         _.temp = True
         _.temp_namespaces = f.namespaces
-        print(f.namespaces)
-        print(f'built namespace: {_.temp_namespaces}')
         _.temp_reserved = f.reserved
 
         while len(_.code) > 0:
@@ -334,8 +327,6 @@ class Interpreter:
 
         if f.return_item != None:
             return f.namespaces[f.return_item].value
-        
-        print(f'{f.name}\'s execution return: {_.return_item}')
         return _.return_item
     
 
@@ -366,8 +357,6 @@ class Interpreter:
             elif index == expr_len:
                 operative = expr[last_addition_index+1:].strip()
                 if operative in _.current_namespace:
-                    print(operative)
-                    print(_.current_namespace)
                     operative = _.current_namespace[operative].out
                     evaluation += operative
                 elif operative.isdigit():
