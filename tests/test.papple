@@ -1,8 +1,8 @@
 x = 10
-
 out(x)
 
-fnc add (x, y) sum {
+
+fnc add(x, y) sum {
 	sum = x + y
 }
 

@@ -165,7 +165,7 @@ class Interpreter:
         return result
 
 
-    # currently the parser only supports single-line assignments
+    # does not handle multi-line assignments
     def parse_assignment(_, equals_index:int) -> P_Object:
         line = _.code[0]
         name = line[:equals_index].strip()
@@ -292,7 +292,7 @@ class Interpreter:
 
         _.current_callables.update({f.name:f})
         _.code = _.code[line_count:]
-        info(f'{function_name}\'s tokens: {tokens}')
+        log(f'{function_name}\'s tokens: {tokens}')
         return ...
     
 
@@ -359,7 +359,7 @@ class Interpreter:
                 if operative in _.current_namespace:
                     operative = _.current_namespace[operative].out
                     evaluation += operative
-                elif operative.isdigit():
+                elif operative[0] in ["'", '"'] and operative[0] == operative[-1] or operative.isdigit():
                     evaluation += operative
                 else:
                     error(f'Unknown value: `{operative}`')
