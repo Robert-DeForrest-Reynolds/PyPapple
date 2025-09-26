@@ -1,6 +1,8 @@
 x = 10
+
 out(x)
 
+y = 7
 
 fnc add(x, y) sum {
 	sum = x + y

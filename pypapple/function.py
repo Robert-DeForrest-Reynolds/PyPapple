@@ -26,7 +26,7 @@ class Function():
 
         _.reserved = {}
 
-        log(f'Function namespace: {_.namespaces}')
+        log(f'{_.name} namespace: {_.namespaces}')
 
 
     def __call__(_, pypapple:Interpreter, args):

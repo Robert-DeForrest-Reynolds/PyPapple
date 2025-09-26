@@ -101,22 +101,17 @@ class Interpreter:
 
     def parse(_) -> P_Object:
         line_length = len(_.code[0])
-        counts = {
-            '{':0,
-            '(':0,
-        }
+        counts = { '{':0, '(':0 }
         for index in range(line_length):
             char:str = _.code[0][index]
             if char in counts:
                 counts[char] += 1
                 continue
             if char == '=' and sum(counts.values()) == 0:
-                info("Assignment detected")
                 assignment_result = _.parse_assignment(index)
                 return assignment_result
 
             potential:str = _.code[0][:index+1]
-            info(f'potential: {potential}')
             if potential in _.header:
                 return _.header[potential](index)
             
@@ -301,14 +296,18 @@ class Interpreter:
         storage = _.code.copy()
         _.code = f.block
         args:list = [arg.strip() for arg in args.split(',')]
+        copy = args.copy()
         for arg in args:
             if arg in _.current_namespace:
                 f.namespaces[arg] = _.current_namespace[arg]
-                args.remove(arg)
-        for arg in args:
+                copy.remove(arg)
+                
+
+        for arg in copy:
             for k in f.namespaces:
                 if f.namespaces[k].value == 'none':
                     f.namespaces[k].value = arg
+                    break
 
         _.temp = True
         _.temp_namespaces = f.namespaces
