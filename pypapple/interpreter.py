@@ -1,11 +1,14 @@
 from typing import Callable, Any
 from os import environ
-from sys import getrecursionlimit, setrecursionlimit
+from sys import setrecursionlimit, getrecursionlimit
 
 from .util import *
 from .standard import *
 from .p_object import P_Object
 from .function import Function
+
+
+__all__ = []
 
 
 class Interpreter:
@@ -14,11 +17,8 @@ class Interpreter:
     keywords:dict[str,Callable]
     current_line_index:int
     def __init__(_, code:list[str]=None) -> None:
-        _.code = []
-
-        for line in code:
-            stripped = line.strip()
-            _.code.append(stripped)
+        _.code = code
+        print(_.code)
 
         _.original_code = _.code.copy()
         _.interpreting = True
@@ -32,20 +32,14 @@ class Interpreter:
             _.cycle_count = getrecursionlimit()
 
         _.namespaces = {}
-        _.reserved = {
+        _.header = {
             # separation with a space is required
             'fnc':_.parse_function,
-            'obj':_.parse_object,
-            'try':_.parse_try,
-            'for':_.parse_for,
-            'if':_.parse_if,
-            'while':_.parse_while,
-
-            # separation with a space is optional
-            'out':_.parse_call,
-            'in':_.parse_call,
-
-            '=':_.parse_assignment,
+            'obj':lambda: info("obj decl found"),
+            'try':lambda: info("try found"),
+            'for':lambda: info("for found"),
+            'if':lambda: info("if found"),
+            'while':lambda: info("while found"),
         }
 
         _.callables = {
@@ -55,8 +49,8 @@ class Interpreter:
 
         _.temp = False
         _.temp_function_signature = 'fnc __temp__()'
-        _.temp_reserved:dict[str:Callable|P_Object|Function] = {}
         _.temp_namespaces:dict[str:P_Object|Function] = {}
+        _.temp_callables:dict[str:Function] = {}
 
         _.return_item = None
 
@@ -64,34 +58,38 @@ class Interpreter:
 
         if _.cycle_count == -1:
             while _.interpreting:
-                _.execute_next()
+                _.execute_next_line()
         else:
             while _.interpreting and _.cycle_count != 0:
-                _.execute_next()
+                _.execute_next_line()
                 _.cycle_count -= 1
 
+
     @property
-    def current_namespace(_) -> dict:
+    def current_namespace(_) -> dict[str:P_Object]:
         return _.temp_namespaces if _.temp else _.namespaces
 
 
     @property
-    def current_reserved(_) -> dict:
-        return _.temp_reserved if _.temp else _.reserved
-        
+    def current_callables(_) -> dict[str:Function|Callable]:
+        return _.temp_callables if _.temp else _.callables
 
-    def execute_next(_) -> None:
+
+    def execute_next_line(_) -> None:
+        _.current_line_index += 1
+
+        while _.code:
+            if _.code[0] == '' or _.code[0] == '\n':
+                _.code = _.code[1:]
+            else:
+                break
+
         try: _.code[0]
         except IndexError:
             log('End of file reached')
             _.interpreting = False
             return
 
-        _.current_line_index += 1
-
-        if _.code[0] == '' or _.code[0] == r'\n':
-            _.code = _.code[1:]
-            return
         
         log(f'Parsing Line: {_.code[0]}', important=True)
         _.return_item = _.parse()
@@ -100,14 +98,227 @@ class Interpreter:
             log(f'Return item: {_.return_item}', important=True)
 
         return _.return_item
+            
+
+    def parse(_) -> P_Object:
+        line_length = len(_.code[0])
+        counts = {
+            '{':0,
+            '(':0,
+        }
+        for index in range(line_length):
+            char:str = _.code[0][index]
+            if char in counts:
+                counts[char] += 1
+                continue
+            if char == '=' and sum(counts.values()) == 0:
+                info("Assignment detected")
+                assignment_result = _.parse_assignment(index)
+                return assignment_result
+
+            potential:str = _.code[0][:index+1]
+            info(f'potential: {potential}')
+            if potential in _.header:
+                return _.header[potential](index)
+            
+            if potential in _.callables:
+                return _.parse_call(index, _.callables[potential])
 
 
-    def execute_function_body(_, f:Function) -> Any:
+    # does not handle multi-line calls
+    def parse_call(_, header_end_index:int, call:Callable) -> P_Object:
+        # 2 to skip the paranthesis, as we stop at the end of the name of the call
+        leftover = _.code[0][header_end_index+2:]
+        leftover_len = len(leftover)
+        tokens = []
+        current_index = 0
+        in_quote = False
+        str_stack = ''
+
+        params = []
+        
+        while current_index < leftover_len:
+            char = leftover[current_index]
+            if char == ',':
+                params.append(str_stack)
+                str_stack = ''
+            elif char == ')':
+                params.append(str_stack)
+                tokens.append(params)
+                str_stack = ''
+                current_index += 1
+                break
+            elif char in ['"', "'"]:
+                in_quote = not in_quote
+                str_stack += char
+            elif char == ' ' and in_quote:
+                str_stack += char
+            elif char not in [' ', '\t']: str_stack += char
+            current_index += 1
+
+        result = call(params)
+
+        if leftover[current_index:]:
+            _.code[0] = leftover[current_index:]
+        else:
+            _.code = _.code[1:]
+
+        return result
+
+
+    # currently the parser only supports single-line assignments
+    def parse_assignment(_, equals_index:int) -> P_Object:
+        line = _.code[0]
+        name = line[:equals_index].strip()
+        assignment:str = line[equals_index+1:].strip()
+
+        assignee:P_Object = None
+
+        call_split = assignment.split("(")
+        potential_call = call_split[0].strip()
+        if potential_call in _.current_callables:
+            # need to get arguments line by line, in case it's multiline
+            assignment = _.current_callables[potential_call](_, call_split[1][:-1])
+        
+        if type(assignment) == str:
+            for char in assignment:
+                if char in ['+', '-', '*', '/']:
+                    assignment = _.evaluate_expression(assignment).value
+                    break
+        if name in _.current_namespace:
+            assignee = _.current_namespace[name]
+            assignee.value = assignment
+        else:
+            if assignment.isdigit():
+                assignment = int(assignment)
+            assignee = P_Object(name, assignment, int)
+            _.current_namespace.update({name:assignee})
+        _.code = _.code[1:]
+        log(f'name: {name}\nassignee: {assignee}\nassignment: {assignment}')
+        return assignee
+    
+
+    def parse_function(_, header_end_index:int) -> Any:
+        leftover = _.code[0][header_end_index+1:]
+        leftover_len = len(leftover)
+        tokens = []
+        open_bracket_count = 0
+        close_bracket_count = 0
+        current_index = 0
+        in_quote = False
+        str_stack = ''
+
+        function_name = None
+        params = []
+        return_variable = False
+        block = []
+
+        while current_index < leftover_len:
+            char = leftover[current_index]
+            if char == '(':
+                function_name = str_stack
+                tokens.append(function_name)
+                str_stack = ''
+                current_index += 1
+                break
+            elif char in ['"', "'"]:
+                in_quote = not in_quote
+                str_stack += char
+            elif char == ' ' and in_quote:
+                str_stack += char
+            elif char not in [' ', '\t']: str_stack += char
+            current_index += 1
+        
+        while current_index < leftover_len:
+            char = leftover[current_index]
+            if char == ',':
+                params.append(str_stack)
+                str_stack = ''
+            elif char == ')':
+                params.append(str_stack)
+                tokens.append(params)
+                str_stack = ''
+                current_index += 1
+                break
+            elif char in ['"', "'"]:
+                in_quote = not in_quote
+                str_stack += char
+            elif char == ' ' and in_quote:
+                str_stack += char
+            elif char not in [' ', '\t']: str_stack += char
+            current_index += 1
+
+        line_count = 0
+        current_index += 3
+        parsing = True
+        while line_count < len(_.code) and parsing:
+            current_line = _.code[line_count]
+            current_line_length = len(current_line)
+            while current_index < current_line_length:
+                char = current_line[current_index]
+                if char == '{':
+                    open_bracket_count += 1
+                    if return_variable == False and str_stack != '':
+                        return_variable = str_stack
+                        tokens.append(return_variable)
+                        str_stack = ''
+                    elif open_bracket_count > 1:
+                        str_stack += char
+                    else:
+                        return_variable = None
+                        tokens.append(return_variable)
+                elif char == '}':
+                    close_bracket_count += 1
+                    if open_bracket_count == close_bracket_count:
+                        parsing = False
+                        break
+                    else:
+                        str_stack += char
+                elif char == '\n' or char == ';':
+                    if str_stack != '':
+                        block.append(str_stack)
+                    str_stack = ''
+                elif char in ['"', "'"]:
+                    in_quote = not in_quote
+                    str_stack += char
+                elif char == ' ' and in_quote:
+                    str_stack += char
+                elif char not in [' ', '\t']: str_stack += char
+                current_index += 1
+            current_index = 0
+            line_count += 1
+        tokens.append(block)
+
+        f = Function(tokens)
+
+        _.current_callables.update({f.name:f})
+        print(_.code)
+        print(line_count)
+        _.code = _.code[line_count:]
+        print(_.code)
+        info(f'{function_name}\'s tokens: {tokens}')
+        return ...
+    
+
+    def execute_function(_, f:Function, args:str):
         log(f'Executing: {f.name}')
         storage = _.code.copy()
-        _.code = f.source
+        _.code = f.block
+        args:list = [arg.strip() for arg in args.split(',')]
+        print(_.current_namespace)
+        for arg in args:
+            if arg in _.current_namespace:
+                f.namespaces[arg] = _.current_namespace[arg]
+                args.remove(arg)
+        for arg in args:
+            for k in f.namespaces:
+                if f.namespaces[k].value == 'none':
+                    f.namespaces[k].value = arg
+
         _.temp = True
         _.temp_namespaces = f.namespaces
+        print(f.namespaces)
+        print(f'built namespace: {_.temp_namespaces}')
         _.temp_reserved = f.reserved
 
         while len(_.code) > 0:
@@ -124,99 +335,9 @@ class Interpreter:
         if f.return_item != None:
             return f.namespaces[f.return_item].value
         
+        print(f'{f.name}\'s execution return: {_.return_item}')
         return _.return_item
-
-
-    def parse(_):
-        # Remove comments from line
-        code = _.code[0].split("~")[0].strip()
-        if len(code) == 0:
-            log("Ignoring comment")
-            _.code = _.code[1:]
-            return
-
-        # catches all space separated reserves
-        potential = code.split(" ")[0].strip()
-        if potential in _.reserved:
-            return _.reserved[potential]()
-        elif potential in _.temp_reserved:
-            return _.temp_reserved[potential]()
-
-        # catch calls
-        potential = code.split("(")[0].strip()
-        if potential in _.reserved:
-            return _.reserved[potential]()
-        elif potential in _.temp_reserved:
-            return _.temp_reserved[potential]()
-
-        # catch assignments, do this last as it's the heaviest
-        for char in code:
-            if char == '=':
-                return _.parse_assignment()
-        
-        
-        error(f'Unparsable line: `{potential}`',
-                line=_.current_line_index)
-        exit(0)
-
-
-    def find_closing_symbol(_, opening_symbol:str, closing_symbol) -> list[str, list[str]]:
-        'Removes code from _.code where necessary'
-        required_brackets:int = 0
-        content:str
-        small_quote = False
-        big_quote = False
-        first_bracket = False
-        signature = ""
-        open_line_index = 0
-        open_char_index = 0
-        for line_index, line in enumerate(_.code):
-            last_symbol_index:int = 0
-            line:str
-            for char_index, character in enumerate(line):
-                if character == "'" and not big_quote:
-                    small_quote = not small_quote
-                    continue
-                if character == '"' and not small_quote:
-                    big_quote = not big_quote
-                    continue
-                if not small_quote and not big_quote:
-                    if character == opening_symbol:
-                        if first_bracket == False:
-                            signature = line[:char_index].strip()
-                            open_line_index = line_index
-                            open_char_index = char_index
-                            first_bracket = True
-                        required_brackets += 1
-                    if character == closing_symbol:
-                        last_symbol_index:int = char_index
-                        required_brackets -= 1
-                        
-            if required_brackets == 0:
-                content:list = []
-                if open_line_index == line_index:
-                    content.append(_.code[open_line_index][open_char_index+1:-1])
-                else:
-                    if _.code[open_line_index][open_char_index+1:] != '':
-                        content.append(_.code[open_line_index][open_char_index+1:])
-                    
-                    content.extend(_.code[open_line_index+1:line_index])
-                    
-                    if _.code[line_index][0].strip() != closing_symbol:
-                        content.append(_.code[line_index][:char_index])
-                leftover = line[last_symbol_index+1:]
-                if leftover and not leftover.strip().startswith("~"):
-                    _.code = [leftover] + _.code[line_index+1:]
-                    _.current_line_index += line_index
-                else:
-                    _.code = _.code[line_index+1:]
-                    _.current_line_index += line_index
-                return signature, content
-            
-        error(f"Unmatched `{opening_symbol}` (no closing `{closing_symbol}` found)",
-              line=_.current_line_index)
-        exit(0)
-
+    
 
     def evaluate_expression(_, expr:str, assignee:P_Object=None):
         log(f'Expression expr: {expr}')
@@ -234,155 +355,37 @@ class Interpreter:
                     operative = expr[last_addition_index+1:index].strip()
                     last_addition_index = index
 
-                if operative in _.current_namespace:
-                    operative = _.current_namespace[operative].value
+                if operative[0] in ["'", '"'] and operative[0] == operative[-1] or operative.isdigit():
                     evaluation += operative + char
-                elif operative[0] in ["'", '"']:
+                elif operative in _.current_namespace:
+                    operative = _.current_namespace[operative].out
                     evaluation += operative + char
+                else:
+                    error(f'Unknown value: `{operative}`')
 
             elif index == expr_len:
                 operative = expr[last_addition_index+1:].strip()
                 if operative in _.current_namespace:
-                    operative = _.current_namespace[operative].value
-                evaluation += operative
+                    print(operative)
+                    print(_.current_namespace)
+                    operative = _.current_namespace[operative].out
+                    evaluation += operative
+                elif operative.isdigit():
+                    evaluation += operative
+                else:
+                    error(f'Unknown value: `{operative}`')
         
         log(f'Expression evaluation: {evaluation}')
         try:
             if assignee:
                 assignee.value = str(eval(evaluation))
+                log("Evaluation Successful")
                 return assignee
             else:
                 p_object = P_Object("eval_var")
                 p_object.value = str(eval(evaluation))
-            log("Evaluation Successful")
-            return p_object
+                log("Evaluation Successful")
+                return p_object
         except Exception:
             log("Evaluation Unsuccessful")
             return None
-
-
-    def parse_assignment(_):
-        assignment = _.code[0].strip().split('=')
-        assignee_name:str = assignment[0].strip()
-        assignee:P_Object
-        
-        if assignee_name in _.current_namespace:
-            assignee = _.current_namespace[assignee_name]
-        else:
-            _.current_namespace.update({assignee_name:P_Object(assignee_name)})
-            assignee = _.current_namespace[assignee_name]
-        assignment_str = assignment[1].strip()
-
-        if assignment_str in _.current_namespace:
-            assignee.value = _.current_namespace[assignment_str]
-
-        # catch calls, and operations
-        # needs to check if instantiation still
-        potential = assignment_str.split("(")[0].strip()
-        result = None
-        if potential in _.reserved:
-            result = _.reserved[potential]()
-            assignee.value = result
-        elif potential in _.temp_reserved:
-            result = _.temp_reserved[potential]()
-            assignee.value = result
-        else:
-            new_assignee:P_Object = _.evaluate_expression(assignment_str, assignee=assignee)
-            if new_assignee:
-                _.current_namespace[assignee_name] = new_assignee
-
-            else: assignee.value = assignment_str
-        
-        info(f'Assignment contents: name=`{assignee_name}`, value=`{assignee.value}`\n')
-        info(f'Assignment Object: {assignee}')
-        _.code = _.code[1:]
-        return result
-
-
-    def parse_function(_):
-        signature, content = _.find_closing_symbol("{", "}")
-        info(f'Function signature: {signature}\n')
-        info(f'Function contents: {content}\n')
-
-        f = Function(signature, content)
-        
-        _.reserved.update({f.name:_.parse_call})
-        _.namespaces.update({f.name:f})
-
-
-    def parse_object(_):
-        signature, content = _.find_closing_symbol("{", "}")
-        info(f'Object signature: {signature}\n')
-        info(f'Object contents: {content}\n')
-
-
-    def parse_try(_):
-        signature, content = _.find_closing_symbol("{", "}")
-        info(f'Try contents: {content}\n')
-
-
-    def parse_for(_):
-        signature, content = _.find_closing_symbol("{", "}")
-        info(f'For signature: {signature}\n')
-        info(f'For contents: {content}\n')
-
-
-    def parse_while(_):
-        signature, content = _.find_closing_symbol("{", "}")
-        info(f'While signature: {signature}\n')
-        info(f'While contents: {content}\n')
-
-
-    def parse_if(_):
-        signature, content = _.find_closing_symbol("{", "}")
-        info(f'If signature: {signature}\n')
-        info(f'If contents: {content}\n')
-
-
-    def parse_call(_):
-        signature, content = _.find_closing_symbol("(", ")")
-        if '=' in signature: # check if function call is assignment
-            signature = signature[signature.find('=')+1:].strip()
-        info(f'Call signature: {signature}\n')
-        info(f'Call contents:{content}\n')
-        
-        passed_arguments = []
-        last_comma_index = 0
-        required = 0
-        required_type = ""
-
-        for index, c in enumerate(content[0]):
-            if c == required_type:
-                required -= 1
-            elif c in ['"', "'"]:
-                required_type = c
-                required += 1
-                
-            if c == ',' and required == 0:
-                passed_arguments.append(content[0][last_comma_index:index].strip())
-                last_comma_index = index
-
-        if required == 0 and passed_arguments == []:
-            passed_arguments.append(content[0])
-        else:
-            leftover = content[0][last_comma_index+1:]
-            passed_arguments.append(leftover)
-
-        if signature in _.current_namespace:
-            f:Function = _.current_namespace[signature]()
-            arg_count = len(f.namespaces.keys())
-
-            index = 0
-            for name, value in f.namespaces.items():
-                if index == arg_count: break
-                if value == None:
-                    f.namespaces[f.arguments[index]] = P_Object(name, passed_arguments[index])
-                    index += 1
-                    continue
-
-            result = _.execute_function_body(f)
-            return result
-        elif signature in _.callables:
-            result = _.callables[signature](passed_arguments)
-            info(f'Callable return: {result}')
-            return result

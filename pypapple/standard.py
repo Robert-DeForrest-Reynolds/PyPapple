@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from interpreter import Interpreter
+    from .interpreter import Interpreter
 
 from .util import *
 
@@ -25,7 +25,7 @@ def P_out(_:Interpreter, msg:str|list[str]) -> None:
                     for item in actuals:
                         if item in ["'", '"']: continue
                         if item in _.current_namespace:
-                            formatted += _.current_namespace[item].value
+                            formatted += _.current_namespace[item].out
                         else:
                             formatted += item[1:]
                 else:
@@ -35,12 +35,12 @@ def P_out(_:Interpreter, msg:str|list[str]) -> None:
         else:
             value = None
             if arg in _.current_namespace:
-                if _.current_namespace[arg].value:
-                    value = _.current_namespace[arg].value
+                if _.current_namespace[arg].out:
+                    value = _.current_namespace[arg].out
                 else:
                     value = "None"
-            if not value:
-                value = str(_.evaluate_expression(arg).value)
+            # if not value:
+            #     value = str(_.evaluate_expression(arg).out)
             
             if value:
                 output_values.append(value)

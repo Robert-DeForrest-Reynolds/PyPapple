@@ -1,6 +1,11 @@
 x = 10
 
+out(x)
+
 fnc add (x, y) sum {
 	sum = x + y
-	out("sum: {sum}")
 }
+
+x = add(x, 3)
+
+out(x)
