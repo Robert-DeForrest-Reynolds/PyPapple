@@ -8,6 +8,6 @@ fnc add(x, y) sum {
 	sum = x + y
 }
 
-x = add(x, 3, 9)
+x = add(x, 3)
 
 out(x)
