@@ -18,7 +18,7 @@ from typing import List
 from sys import argv
 from os import path, environ
 from .util import *
-from .interpreter import Interpreter
+from .interpreter2 import Interpreter
 
 __version__:str
 

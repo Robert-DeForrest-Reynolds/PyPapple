@@ -1,53 +1,19 @@
-from typing import List, Callable, Any
+from typing import Callable, Any
 from os import environ
 from sys import getrecursionlimit, setrecursionlimit
-from copy import deepcopy
+
 from .util import *
-from .p_object import P_Object
-
 from .standard import *
-
-
-class Function():
-    signature:str
-    source:str
-    arguments:list[str]
-    namespaces:dict
-    reserved:dict
-    return_item:Any
-    def __init__(_, signature, content:str) -> None:
-        _.signature = signature
-        _.content = content
-        _.source = [instruction for instruction in content if instruction != '']
-        _.namespaces = {}
-        _.reserved = {}
-        
-        split = _.signature.split('(')
-        _.name = split[0].strip().split(" ")[1]
-        split = split[1].split(")")
-
-        _.arguments = [a.strip() for a in split[0].split(",") if a.strip()]
-
-        _.return_item = split[1].strip() if split[1].strip() != '' else None
-
-        for arg in _.arguments:
-            _.namespaces.update({arg:None})
-
-        log(f'Function namespace: {_.namespaces}')
-        log(f'Function source: {_.source}')
-
-
-    def __call__(_):
-        log(f"Getting deep copy of {_.name}", important=True)
-        return deepcopy(_)
+from .p_object import P_Object
+from .function import Function
 
 
 class Interpreter:
-    code:List[str]
-    original_code:List[str]
+    code:list[str]
+    original_code:list[str]
     keywords:dict[str,Callable]
     current_line_index:int
-    def __init__(_, code:List[str]=None) -> None:
+    def __init__(_, code:list[str]=None) -> None:
         _.code = []
 
         for line in code:
@@ -123,7 +89,7 @@ class Interpreter:
 
         _.current_line_index += 1
 
-        if _.code[0] == '':
+        if _.code[0] == '' or _.code[0] == r'\n':
             _.code = _.code[1:]
             return
         
@@ -335,11 +301,13 @@ class Interpreter:
 
     def parse_function(_):
         signature, content = _.find_closing_symbol("{", "}")
-        f = Function(signature, content)
-        _.reserved.update({f.name:_.parse_call})
-        _.namespaces.update({f.name:f})
         info(f'Function signature: {signature}\n')
         info(f'Function contents: {content}\n')
+
+        f = Function(signature, content)
+        
+        _.reserved.update({f.name:_.parse_call})
+        _.namespaces.update({f.name:f})
 
 
     def parse_object(_):
