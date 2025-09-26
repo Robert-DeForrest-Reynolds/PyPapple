@@ -296,18 +296,22 @@ class Interpreter:
         storage = _.code.copy()
         _.code = f.block
         args:list = [arg.strip() for arg in args.split(',')]
-        copy = args.copy()
+        leftovers = args.copy()
         for arg in args:
             if arg in _.current_namespace:
                 f.namespaces[arg] = _.current_namespace[arg]
-                copy.remove(arg)
+                leftovers.remove(arg)
                 
-
-        for arg in copy:
+        args = leftovers.copy()
+        for arg in leftovers:
             for k in f.namespaces:
                 if f.namespaces[k].value == 'none':
                     f.namespaces[k].value = arg
+                    args.remove(arg)
                     break
+
+        if len(args) > 0:
+            error(f"Too many parameters given, `{f.name}` only takes {len(f.params)} parameters")
 
         _.temp = True
         _.temp_namespaces = f.namespaces
