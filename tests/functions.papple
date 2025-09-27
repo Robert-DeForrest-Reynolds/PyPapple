@@ -1,0 +1,18 @@
+fnc add(x, y) sum {
+	sum = x + y
+}
+
+x = add(x, 3)
+
+out(x)
+
+
+fnc divide(x, y) q, r {
+    q = x / y
+    r = x % y
+}
+res = divide(10, 3)
+out(res.q, res.r)
+
+q, r = divide(5, 2)
+out(q, r)

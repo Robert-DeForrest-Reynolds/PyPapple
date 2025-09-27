@@ -1,0 +1,15 @@
+obj Cat {
+	name:String
+	
+	fnc init(name) _ {
+		_.name = name
+	}
+
+    fnc meow() {
+        out('Meow')
+    }
+}
+
+jolly = Cat("Jolly")
+
+jolly.meow()

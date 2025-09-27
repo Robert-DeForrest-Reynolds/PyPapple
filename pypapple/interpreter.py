@@ -349,7 +349,9 @@ class Interpreter:
                     operative = expr[last_addition_index+1:index].strip()
                     last_addition_index = index
 
-                if operative[0] in ["'", '"'] and operative[0] == operative[-1] or operative.isdigit():
+                if operative[0] in ["'", '"']\
+                and operative[0] == operative[-1]\
+                or operative.isdigit():
                     evaluation += operative + char
                 elif operative in _.current_namespace:
                     operative = _.current_namespace[operative].out
@@ -362,7 +364,9 @@ class Interpreter:
                 if operative in _.current_namespace:
                     operative = _.current_namespace[operative].out
                     evaluation += operative
-                elif operative[0] in ["'", '"'] and operative[0] == operative[-1] or operative.isdigit():
+                elif operative[0] in ["'", '"']\
+                and operative[0] == operative[-1]\
+                or operative.isdigit():
                     evaluation += operative
                 else:
                     error(f'Unknown value: `{operative}`')

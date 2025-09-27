@@ -1,0 +1,22 @@
+x:int = 10
+out(x)
+
+pi:float = 3.141
+out(pi)
+
+greeting:str = 'hello'
+out(greeting)
+
+alive:bool = true
+out(alive)
+
+some_potential = none
+out(some_potential)
+
+fruits:list = [ 'apple', 'cherry', 'mango' ]
+out(fruits)
+
+student_gpas:dict = [ 'Alice' : 3.2,
+                      'Jason' : 2.9,
+                      'Marie' : 3.8, ]
+out(student_gpas)
