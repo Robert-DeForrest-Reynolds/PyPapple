@@ -48,7 +48,7 @@ class Interpreter:
 
         _.temp = False
         _.temp_function_signature = 'fnc __temp__()'
-        _.temp_namespaces:dict[str:P_Object|Function] = {}
+        _.temp_namespaces:dict[str:P_Object] = {}
         _.temp_callables:dict[str:Function] = {}
 
         _.return_item = None
