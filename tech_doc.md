@@ -184,8 +184,13 @@ for n in 10 {
 For managing packages, and installing them, all packages will be added to a repository as pull requests, and afterward being merged, users can use the built-in package manager to download specific packages, hopefully this is okay with GitHub? We can always change it.
 
 
+### Core Tenents (Rough Draft)
+ - Reduce the cognitive load as much as possible.
+
+
 Ideas for additions afterward completion:
  - `with open` implementation of sort, probably using a while loop
  - `function are 'compiled' to actual python code for better reusability`, essentially creating a runtime compiler that can be used. this would probably be a complete rework to make the whole project compile to 'python' code before use, but that may also make implements other than functions slower. maybe we'll implement 'function compilation' of sorts only.
  - LSP for VSCode
  - Stupid little package manager for fun using the github repository idea
+ - I'm a little torn on implementing `defer`, or alike syntax. I think it's a good idea, but it does feel like it breaks the tenent `Reduce the cognitive load as much as possible.`.
