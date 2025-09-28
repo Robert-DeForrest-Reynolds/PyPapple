@@ -1,0 +1,9 @@
+{   
+    "editor.fontFamily": "JetBrains Mono Regular, Consolas, 'Courier New', monospace",
+    "editor.minimap.enabled": false,
+    "editor.rulers": [
+        100
+    ],
+    "workbench.activityBar.location": "hidden",
+    "workbench.startupEditor": "none",
+}

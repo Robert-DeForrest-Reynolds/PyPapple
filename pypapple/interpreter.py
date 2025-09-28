@@ -107,11 +107,13 @@ class Interpreter:
             if char in counts:
                 counts[char] += 1
                 continue
+            
             if char == '=' and sum(counts.values()) == 0:
                 assignment_result = _.parse_assignment(index)
                 return assignment_result
 
             potential:str = _.code[0][:index+1]
+            
             if potential in _.header:
                 return _.header[potential](index)
             
@@ -119,7 +121,10 @@ class Interpreter:
                 return _.parse_call(index, _.callables[potential])
 
 
-    # does not handle multi-line calls
+    """ ~ TO DO ~
+    - handle multi-line calls
+    - we should probably parse for any params be callables, if they being called or referenced
+    """
     def parse_call(_, header_end_index:int, call:Callable) -> P_Object:
         # 2 to skip the paranthesis, as we stop at the end of the name of the call
         leftover = _.code[0][header_end_index+2:]
@@ -160,7 +165,11 @@ class Interpreter:
         return result
 
 
-    # does not handle multi-line assignments
+    """ ~ TO DO ~
+    - handle multi-line assignments, which could be calls that use multiple lines for parameters,
+    or lengthy escaped inline statements. to turn any statement into a multi-line statement,
+    you wrap it in brackets without a header. it will then be assumed to be a multi-line assignment
+    """
     def parse_assignment(_, equals_index:int) -> P_Object:
         line = _.code[0]
         name = line[:equals_index].strip()
@@ -192,6 +201,14 @@ class Interpreter:
         return assignee
     
 
+    """ ~ TO DO ~
+    - handle errors:
+        - mismatching paranthesis around parameters
+        - unfulfilled parameter that has no default
+        - return variable never assigned, or even referenced without assignment.
+        the return variable should be none only if afterward the function executes, there is still
+        no value. it should not be a valid namespace until is it given a value, or returned though
+    """
     def parse_function(_, header_end_index:int) -> Any:
         leftover = _.code[0][header_end_index+1:]
         leftover_len = len(leftover)
