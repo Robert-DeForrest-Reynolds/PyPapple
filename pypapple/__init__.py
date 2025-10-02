@@ -22,7 +22,6 @@ from .interpreter import Interpreter
 
 __version__:str
 
-
 def run():
     argv.pop(0)
     if len(argv) == 0: error("No source file given\n")
